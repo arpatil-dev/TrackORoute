@@ -1,0 +1,14 @@
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Expo
+.expo
+.expo-shared
+
+# Env
+server/.env
+
+# Others
+Tutorial.md
