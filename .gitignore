@@ -9,6 +9,8 @@ yarn-error.log
 
 # Env
 server/.env
+admin-client/.env
+
 
 # Others
 Tutorial.md
