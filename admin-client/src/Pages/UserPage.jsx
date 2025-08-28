@@ -126,7 +126,7 @@ export default function UserPage() {
         {trips.map(trip => (
           <Link to={`/trip/${trip._id}`} key={trip._id} className="block">
             <div className="p-4 border rounded-lg shadow hover:bg-gray-100 cursor-pointer">
-              <div className="font-semibold">{trip.name || trip._id}</div>
+              <div className="font-semibold">{trip.tripName || trip._id}</div>
               <div className="text-sm text-gray-600">{new Date(trip.locations[0].timestamp).toLocaleString()}</div>
             </div>
           </Link>
