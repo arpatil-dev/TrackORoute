@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import baseUrl from "../services/baseUrl";
 
@@ -11,6 +11,22 @@ export default function UserPage() {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const [message, setMessage] = useState("");
+  const [trips, setTrips] = useState([]);
+  // Fetch user's trips
+  useEffect(() => {
+    async function fetchTrips() {
+      try {
+        const res = await axios.get(`${baseUrl}/api/trips?userId=${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log(res.data.data.trips);
+        setTrips(res.data.data.trips || []);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchTrips();
+  }, [id, token]);
 
   useEffect(() => {
     async function fetchUser() {
@@ -21,7 +37,7 @@ export default function UserPage() {
         setUser(res.data.data);
         setFormData(res.data.data);
       } catch (err) {
-        setMessage("Error fetching user");
+        setMessage("Error fetching user"+err);
       }
     }
     fetchUser();
@@ -48,7 +64,7 @@ export default function UserPage() {
       setEditMode(false);
       setMessage("User updated successfully");
     } catch (err) {
-      setMessage("Error updating user");
+      setMessage("Error updating user"+err);
     }
   };
 
@@ -61,9 +77,13 @@ export default function UserPage() {
       setMessage("User deleted successfully");
       setTimeout(() => navigate("/"), 1000);
     } catch (err) {
-      setMessage("Error deleting user");
+      setMessage("Error deleting user"+err);
     }
   };
+
+
+
+
 
   if (!user) return <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-2xl mt-8">Loading...</div>;
 
@@ -97,6 +117,21 @@ export default function UserPage() {
           </div>
         </form>
       )}
+      {/* ...existing code... */}
+      <hr className="my-8" />
+      <h3 className="text-xl font-bold mb-4">Trip History</h3>
+      <div className="space-y-4">
+        {trips.length === 0 && <div className="text-gray-500">No trips found.</div>
+        }{console.log(trips)}
+        {trips.map(trip => (
+          <Link to={`/trip/${trip._id}`} key={trip._id} className="block">
+            <div className="p-4 border rounded-lg shadow hover:bg-gray-100 cursor-pointer">
+              <div className="font-semibold">{trip.name || trip._id}</div>
+              <div className="text-sm text-gray-600">{new Date(trip.locations[0].timestamp).toLocaleString()}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

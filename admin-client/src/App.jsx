@@ -7,6 +7,7 @@ import baseUrl from "./services/baseUrl";
 import Login from "./Pages/Login";
 import Dashboard from "./Pages/Dashboard";
 import UserPage from "./Pages/UserPage";
+import TripPage from "./Pages/TripPage";
 
 export default function App() {
   const user = useSelector((state) => state.userState.user);
@@ -31,7 +32,8 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={!user ? <Login /> : <Dashboard />} />
-        <Route path="/user/:id" element={<UserPage />} />
+  <Route path="/user/:id" element={<UserPage />} />
+  <Route path="/trip/:id" element={<TripPage />} />
       </Routes>
     </Router>
   );
