@@ -9,7 +9,7 @@ export default function TripMap({ locations }) {
   const center = path[0];
 
   return (
-    <MapContainer center={center} zoom={13} style={{ width: "100%", height: "300px", borderRadius: "16px" }}>
+    <MapContainer center={center} zoom={13} style={{ width: "100%", height: "100%", borderRadius: "16px" }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
