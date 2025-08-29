@@ -4,12 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Button } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import LoginScreen from './screens/LoginScreen';
 import TripTrackingScreen from './screens/TripTrackingScreen';
 import TripHistoryScreen from './screens/TripHistoryScreen';
+import TripMapScreen from './screens/TripMapScreen';
 import { storeToken, getToken, removeToken } from './utils/storage';
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
 
 
 export default function App() {
@@ -51,17 +54,24 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <Tab.Navigator>
-        <Tab.Screen name="Track">
-          {() => <TripTrackingScreen token={token} />}
-        </Tab.Screen>
-        <Tab.Screen name="History">
-          {() => <TripHistoryScreen token={token} />}
-        </Tab.Screen>
-        <Tab.Screen name="Logout">
-          {() => <LogoutScreen onLogout={handleLogout} token={token} />}
-        </Tab.Screen>
-      </Tab.Navigator>
+      <Stack.Navigator>
+        <Stack.Screen name="MainTabs" options={{ headerShown: false }}>
+          {() => (
+            <Tab.Navigator>
+              <Tab.Screen name="Track">
+                {() => <TripTrackingScreen token={token} />}
+              </Tab.Screen>
+              <Tab.Screen name="History">
+                {() => <TripHistoryScreen token={token} />}
+              </Tab.Screen>
+              <Tab.Screen name="Logout">
+                {() => <LogoutScreen onLogout={handleLogout} token={token} />}
+              </Tab.Screen>
+            </Tab.Navigator>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="TripMap" component={TripMapScreen} options={{ title: 'Trip Map' }} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }

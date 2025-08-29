@@ -12,7 +12,7 @@ export async function getCurrentLocation() {
   return await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
 }
 
-export async function startLocationUpdates(callback, interval = 10000, distance = 5) {
+export async function startLocationUpdates(callback, interval = 5000, distance = 2) {
   let lastSent = null;
   return Location.watchPositionAsync(
     {
@@ -23,7 +23,7 @@ export async function startLocationUpdates(callback, interval = 10000, distance 
     (location) => {
         
       const { latitude, longitude } = location.coords;
-const { timestamp } = location;
+      const { timestamp } = location;
       
       if (!lastSent || Math.abs(latitude - lastSent.latitude) > 0.00005 || Math.abs(longitude - lastSent.longitude) > 0.00005) {
         callback({ latitude, longitude, timestamp });
