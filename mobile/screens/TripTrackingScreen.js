@@ -1,8 +1,9 @@
 
 import React, { useState, useRef } from 'react';
-import { View, Text, Button, StyleSheet, Alert, Modal, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, Button, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions } from 'react-native';
 import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
 import api from '../utils/api';
+import MapView, { Polyline, Marker } from 'react-native-maps';
 
 export default function TripTrackingScreen({ token }) {
   // State for trip tracking
@@ -12,6 +13,7 @@ export default function TripTrackingScreen({ token }) {
   const [inputTripName, setInputTripName] = useState('');
   const locationSubscription = useRef(null);
   const [locationLogs, setLocationLogs] = useState([]);
+  const [liveLocations, setLiveLocations] = useState([]);
   const [tripId, setTripId] = useState(null);
 
   const handleCheckIn = () => {
@@ -45,6 +47,7 @@ export default function TripTrackingScreen({ token }) {
             { ...location, sent: true },
             ...prev
           ]);
+          setLiveLocations((prev) => [...prev, { latitude: location.latitude, longitude: location.longitude }]);
         } catch (err) {
           setLocationLogs((prev) => [
             { ...location, sent: false, error: err.message },
@@ -75,10 +78,11 @@ export default function TripTrackingScreen({ token }) {
         Alert.alert('Error', err.message || 'Could not stop trip');
       }
     }
-    setTracking(false);
-    setTripName('');
-    setTripId(null);
-    Alert.alert('Trip Ended', 'Your trip has been checked out.');
+  setTracking(false);
+  setTripName('');
+  setTripId(null);
+  setLiveLocations([]);
+  Alert.alert('Trip Ended', 'Your trip has been checked out.');
   };
 
   return (
@@ -87,6 +91,38 @@ export default function TripTrackingScreen({ token }) {
       <Button title="Check In" onPress={handleCheckIn} disabled={tracking} />
       <View style={{ height: 16 }} />
       <Button title="Check Out" onPress={handleCheckOut} disabled={!tracking} />
+      {tracking && (
+        <View style={styles.mapContainer}>
+          <MapView
+            style={styles.map}
+            initialRegion={liveLocations.length > 0 ? {
+              latitude: liveLocations[0].latitude,
+              longitude: liveLocations[0].longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            } : {
+              latitude: 20,
+              longitude: 78,
+              latitudeDelta: 10,
+              longitudeDelta: 10,
+            }}
+          >
+            {liveLocations.length > 0 && (
+              <Polyline
+                coordinates={liveLocations}
+                strokeColor="#007AFF"
+                strokeWidth={4}
+              />
+            )}
+            {liveLocations.length > 0 && (
+              <Marker coordinate={liveLocations[0]} title="Start" />
+            )}
+            {liveLocations.length > 1 && (
+              <Marker coordinate={liveLocations[liveLocations.length - 1]} title="Current" />
+            )}
+          </MapView>
+        </View>
+      )}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -141,14 +177,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     backgroundColor: '#fff',
-    padding: 16,
+    padding: 0,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 32,
+    marginTop: 24,
+    marginBottom: 16,
+    alignSelf: 'center',
+  },
+  mapContainer: {
+    width: Dimensions.get('window').width,
+    height: 300,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  map: {
+    flex: 1,
+    borderRadius: 8,
   },
   modalOverlay: {
     flex: 1,

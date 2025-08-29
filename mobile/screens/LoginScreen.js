@@ -14,9 +14,9 @@ export default function LoginScreen({ onLogin }) {
         email,
         password
       });
-      console.log('Login response:', response.data.data.token);
+      // console.log('Login response:', response.data.data.token);
       if (response.data.data && response.data.data.token) {
-        console.log('Login successful, token:', response.data.data.token);
+        // console.log('Login successful, token:', response.data.data.token);
         onLogin(response.data.data.token);
         Alert.alert('Login Successful', 'You have been logged in successfully.');
       } else {

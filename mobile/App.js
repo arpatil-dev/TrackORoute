@@ -55,7 +55,9 @@ export default function App() {
         <Tab.Screen name="Track">
           {() => <TripTrackingScreen token={token} />}
         </Tab.Screen>
-        <Tab.Screen name="History" component={TripHistoryScreen} />
+        <Tab.Screen name="History">
+          {() => <TripHistoryScreen token={token} />}
+        </Tab.Screen>
         <Tab.Screen name="Logout">
           {() => <LogoutScreen onLogout={handleLogout} token={token} />}
         </Tab.Screen>
