@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { View, Text, Button, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar } from 'react-native';
 import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
 import api from '../utils/api';
 import MapView, { Polyline, Marker } from 'react-native-maps';
@@ -86,144 +86,453 @@ export default function TripTrackingScreen({ token }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Trip Tracking</Text>
-      <Button title="Check In" onPress={handleCheckIn} disabled={tracking} />
-      <View style={{ height: 16 }} />
-      <Button title="Check Out" onPress={handleCheckOut} disabled={!tracking} />
-      {tracking && (
-        <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            initialRegion={liveLocations.length > 0 ? {
-              latitude: liveLocations[0].latitude,
-              longitude: liveLocations[0].longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            } : {
-              latitude: 20,
-              longitude: 78,
-              latitudeDelta: 10,
-              longitudeDelta: 10,
-            }}
-          >
-            {liveLocations.length > 0 && (
-              <Polyline
-                coordinates={liveLocations}
-                strokeColor="#007AFF"
-                strokeWidth={4}
-              />
-            )}
-            {liveLocations.length > 0 && (
-              <Marker coordinate={liveLocations[0]} title="Start" />
-            )}
-            {liveLocations.length > 1 && (
-              <Marker coordinate={liveLocations[liveLocations.length - 1]} title="Current" />
-            )}
-          </MapView>
+    <>
+      <StatusBar barStyle="light-content" backgroundColor={styles.statusBar.backgroundColor} />
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.container}>
+          {/* Header Section */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Trip Tracking</Text>
+            <Text style={styles.subtitle}>
+              {tracking 
+                ? `Tracking: ${tripName}` 
+                : 'Ready to start your journey'
+              }
+            </Text>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.checkInButton, tracking && styles.disabledButton]} 
+              onPress={handleCheckIn} 
+              disabled={tracking}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.actionButtonText, tracking && styles.disabledButtonText]}>
+                🚀 Check In
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.checkOutButton, !tracking && styles.disabledButton]} 
+              onPress={handleCheckOut} 
+              disabled={!tracking}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.actionButtonText, !tracking && styles.disabledButtonText]}>
+                🏁 Check Out
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Map Section */}
+          {tracking && (
+            <View style={styles.mapSection}>
+              <View style={styles.mapHeader}>
+                <Text style={styles.mapTitle}>Live Tracking</Text>
+                <Text style={styles.mapSubtitle}>{liveLocations.length} points recorded</Text>
+              </View>
+              <View style={styles.mapContainer}>
+                <MapView
+                  style={styles.map}
+                  initialRegion={liveLocations.length > 0 ? {
+                    latitude: liveLocations[0].latitude,
+                    longitude: liveLocations[0].longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  } : {
+                    latitude: 20,
+                    longitude: 78,
+                    latitudeDelta: 10,
+                    longitudeDelta: 10,
+                  }}
+                >
+                  {liveLocations.length > 0 && (
+                    <Polyline
+                      coordinates={liveLocations}
+                      strokeColor="#3b82f6"
+                      strokeWidth={4}
+                    />
+                  )}
+                  {liveLocations.length > 0 && (
+                    <Marker coordinate={liveLocations[0]} title="Start" />
+                  )}
+                  {liveLocations.length > 1 && (
+                    <Marker coordinate={liveLocations[liveLocations.length - 1]} title="Current" />
+                  )}
+                </MapView>
+              </View>
+            </View>
+          )}
+
+          {/* Location Logs Section */}
+          <View style={styles.logsSection}>
+            <Text style={styles.logsTitle}>Location Logs</Text>
+            <View style={styles.logsContainer}>
+              {locationLogs.length === 0 ? (
+                <View style={styles.noLogsContainer}>
+                  <Text style={styles.noLogsText}>📍 No locations recorded yet</Text>
+                  <Text style={styles.noLogsSubtext}>Start tracking to see location data</Text>
+                </View>
+              ) : (
+                locationLogs.slice(0, 10).map((log, idx) => {
+                  let timeString = '';
+                  if (log.timestamp) {
+                    const ts = log.timestamp > 1e12 ? log.timestamp : log.timestamp * 1000;
+                    const dateObj = new Date(ts);
+                    timeString = dateObj.toLocaleTimeString();
+                  } else {
+                    timeString = 'No timestamp';
+                  }
+                  return (
+                    <View key={idx} style={styles.logItem}>
+                      <View style={[styles.logStatus, { backgroundColor: log.sent ? '#10b981' : '#ef4444' }]} />
+                      <View style={styles.logContent}>
+                        <Text style={styles.logCoordinates}>
+                          {`${log.latitude.toFixed(6)}, ${log.longitude.toFixed(6)}`}
+                        </Text>
+                        <Text style={styles.logTime}>{timeString}</Text>
+                        {!log.sent && log.error && (
+                          <Text style={styles.logError}>Error: {log.error}</Text>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </View>
         </View>
-      )}
+      </ScrollView>
+
+      {/* Modal */}
       <Modal
         visible={modalVisible}
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>Enter Trip Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Trip Name"
-              value={inputTripName}
-              onChangeText={setInputTripName}
-              autoFocus
-            />
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
-              <TouchableOpacity onPress={() => { setModalVisible(false); setInputTripName(''); }} style={styles.modalButton}>
-                <Text style={{ color: 'red' }}>Cancel</Text>
+            <Text style={styles.modalTitle}>Start New Trip</Text>
+            <Text style={styles.modalSubtitle}>Enter a name for your trip</Text>
+            
+            <View style={styles.modalInputContainer}>
+              <Text style={styles.modalInputLabel}>Trip Name</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g., Morning Commute"
+                placeholderTextColor={styles.placeholderText.color}
+                value={inputTripName}
+                onChangeText={setInputTripName}
+                autoFocus
+              />
+            </View>
+            
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity 
+                onPress={() => { setModalVisible(false); setInputTripName(''); }} 
+                style={[styles.modalButton, styles.cancelButton]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={startTripWithName} style={styles.modalButton}>
-                <Text style={{ color: 'green' }}>Start</Text>
+              <TouchableOpacity 
+                onPress={startTripWithName} 
+                style={[styles.modalButton, styles.startButton]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.startButtonText}>Start Trip</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-      <View style={{ marginTop: 32, width: '100%' }}>
-        <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>Location Logs:</Text>
-        {locationLogs.length === 0 && <Text>No locations sent yet.</Text>}
-        {locationLogs.slice(0, 10).map((log, idx) => {
-          let timeString = '';
-          if (log.timestamp) {
-            const ts = log.timestamp > 1e12 ? log.timestamp : log.timestamp * 1000;
-            const dateObj = new Date(ts);
-            timeString = dateObj.toLocaleString();
-          } else {
-            timeString = 'No timestamp';
-          }
-          return (
-            <Text key={idx} style={{ fontSize: 12, marginBottom: 4, color: log.sent ? 'green' : 'red' }}>
-              {`Lat: ${log.latitude}, Lng: ${log.longitude}, Time: ${timeString}${log.sent ? '' : ' (Error: ' + log.error + ')'}`}
-            </Text>
-          );
-        })}
-      </View>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  // Layout Styles
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  statusBar: {
+    backgroundColor: '#1e293b',
+  },
+
+  // Header Styles
+  headerContainer: {
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    backgroundColor: '#fff',
-    padding: 0,
+    paddingTop: 60,
+    paddingBottom: 32,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 24,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '400',
+    textAlign: 'center',
+  },
+
+  // Button Styles
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  checkInButton: {
+    backgroundColor: '#10b981',
+    shadowColor: '#10b981',
+  },
+  checkOutButton: {
+    backgroundColor: '#ef4444',
+    shadowColor: '#ef4444',
+  },
+  disabledButton: {
+    backgroundColor: '#94a3b8',
+    shadowOpacity: 0.1,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  disabledButtonText: {
+    color: '#e2e8f0',
+  },
+
+  // Map Styles
+  mapSection: {
+    marginBottom: 24,
+  },
+  mapHeader: {
     marginBottom: 16,
-    alignSelf: 'center',
+    alignItems: 'center',
+  },
+  mapTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  mapSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
   },
   mapContainer: {
-    width: Dimensions.get('window').width,
     height: 300,
-    marginTop: 16,
-    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   map: {
     flex: 1,
-    borderRadius: 8,
   },
+
+  // Logs Styles
+  logsSection: {
+    flex: 1,
+  },
+  logsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 16,
+  },
+  logsContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  noLogsContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  noLogsText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  noLogsSubtext: {
+    fontSize: 14,
+    color: '#94a3b8',
+  },
+  logItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  logStatus: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  logContent: {
+    flex: 1,
+  },
+  logCoordinates: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 2,
+  },
+  logTime: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  logError: {
+    fontSize: 12,
+    color: '#ef4444',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+
+  // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  modalInputContainer: {
+    marginBottom: 32,
+  },
+  modalInputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  modalInput: {
+    height: 56,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+  },
+  placeholderText: {
+    color: '#94a3b8',
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 24,
-    width: '80%',
+  cancelButton: {
+    backgroundColor: '#f1f5f9',
+  },
+  startButton: {
+    backgroundColor: '#3b82f6',
+    shadowColor: '#3b82f6',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
     elevation: 4,
   },
-  input: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 8,
+  cancelButtonText: {
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    fontWeight: '600',
+    color: '#64748b',
   },
-  modalButton: {
-    padding: 10,
-    minWidth: 80,
-    alignItems: 'center',
+  startButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

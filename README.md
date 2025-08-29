@@ -13,3 +13,4 @@ cd server
 cp .env.example .env
 npm install
 npm run dev
+eas build --profile production --platform android
