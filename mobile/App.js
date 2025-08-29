@@ -1,4 +1,3 @@
-
 import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';

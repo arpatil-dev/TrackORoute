@@ -6,11 +6,49 @@ yarn-error.log
 # Expo
 .expo
 .expo-shared
+mobile/app.json
+mobile/.env
+mobile/.env.*
 
-# Env
+# Environment files
 server/.env
+server/.env.*
 admin-client/.env
+admin-client/.env.*
+.env
+.env.*
 
+# API Keys and Sensitive Config
+**/app.json
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Build artifacts
+mobile/dist
+admin-client/dist
+
+# Server uploads and temporary files
+server/uploads/
+server/temp/
+server/logs/
+**/uploads/
+**/temp/
+
+# Package manager
+package-lock.json
+yarn.lock
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
 
 # Others
 Tutorial.md

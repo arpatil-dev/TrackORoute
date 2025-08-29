@@ -5,7 +5,9 @@ async function createDefaultSuperUser() {
   try {
     const existing = await User.findOne({ email: "admin@gmail.com" });
     if (!existing) {
-      const hashedPassword = await bcrypt.hash("Admin@123", 10);
+      // Use environment variable for admin password
+      const adminPassword = process.env.ADMIN_PASSWORD || "123Admin";
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
       const superuser = new User({
         firstName: "Super",
         lastName: "Admin",
