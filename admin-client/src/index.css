@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+/* Custom styles for Leaflet markers */
+.start-marker {
+  filter: hue-rotate(90deg) saturate(1.5);
+}
+
+.end-marker {
+  filter: hue-rotate(330deg) saturate(1.5);
+}
