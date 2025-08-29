@@ -87,9 +87,9 @@ export default function TripPage() {
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6 gap-4">
             {/* Breadcrumb Navigation */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 order-1 sm:order-none">
               <button 
                 onClick={() => navigate(-1)}
                 className="inline-flex items-center px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
@@ -97,9 +97,9 @@ export default function TripPage() {
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Back
+                <span className="hidden sm:inline">Back</span>
               </button>
-              <div className="flex items-center text-slate-500">
+              <div className="hidden sm:flex items-center text-slate-500">
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -108,12 +108,12 @@ export default function TripPage() {
             </div>
             
             {/* Page Title */}
-            <div className="text-center flex-1">
-              <h1 className="text-2xl font-bold text-slate-900">Trip Analysis</h1>
-              <p className="text-sm text-slate-600">View comprehensive trip information</p>
+            <div className="text-center sm:flex-1 order-2 sm:order-none">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Trip Analysis</h1>
+              <p className="text-xs sm:text-sm text-slate-600 mt-1">View comprehensive trip information</p>
             </div>
             
-            <div className="w-32"></div> {/* Spacer for centering */}
+            <div className="hidden sm:block sm:w-32"></div> {/* Spacer for centering on larger screens */}
           </div>
         </div>
       </div>
@@ -132,10 +132,10 @@ export default function TripPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           
           {/* Trip Info Card */}
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+          <div className="xl:col-span-1 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-8">
               {/* Trip Header */}
               <div className="text-center mb-8">
@@ -242,17 +242,17 @@ export default function TripPage() {
           </div>
 
           {/* Map Section */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden h-full flex flex-col">
+          <div className="xl:col-span-3">
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden h-full flex flex-col min-h-[400px] xl:min-h-0">
               {/* Map Header */}
-              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
-                <div className="flex items-center justify-between">
+              <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900">Route Visualization</h3>
-                    <p className="text-sm text-slate-600">Interactive map showing the complete trip route</p>
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-900">Route Visualization</h3>
+                    <p className="text-xs sm:text-sm text-slate-600">Interactive map showing the complete trip route</p>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center space-x-2 self-start sm:self-center">
+                    <svg className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
                   </div>
@@ -260,8 +260,10 @@ export default function TripPage() {
               </div>
 
               {/* Map Container */}
-              <div className="flex-1 min-h-0">
-                <TripMap locations={tripData.locations} />
+              <div className="flex-1 min-h-0 relative">
+                <div className="absolute inset-0">
+                  <TripMap locations={tripData.locations} />
+                </div>
               </div>
             </div>
           </div>

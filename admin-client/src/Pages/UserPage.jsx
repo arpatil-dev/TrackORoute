@@ -101,9 +101,9 @@ export default function UserPage() {
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6 gap-4">
             {/* Breadcrumb Navigation */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 order-1 sm:order-none">
               <button 
                 onClick={() => navigate("/")}
                 className="inline-flex items-center px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
@@ -111,9 +111,10 @@ export default function UserPage() {
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Back to Dashboard
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
               </button>
-              <div className="flex items-center text-slate-500">
+              <div className="hidden sm:flex items-center text-slate-500">
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -122,19 +123,19 @@ export default function UserPage() {
             </div>
             
             {/* Page Title */}
-            <div className="text-center flex-1">
-              <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
-              <p className="text-sm text-slate-600">View and manage user details</p>
+            <div className="text-center sm:flex-1 order-2 sm:order-none">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">User Management</h1>
+              <p className="text-xs sm:text-sm text-slate-600 mt-1">View and manage user details</p>
             </div>
             
-            <div className="w-32"></div> {/* Spacer for centering */}
+            <div className="hidden sm:block sm:w-32"></div> {/* Spacer for centering on larger screens */}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           
           {/* User Profile Card - Left Side */}
           <div className="lg:col-span-1">
