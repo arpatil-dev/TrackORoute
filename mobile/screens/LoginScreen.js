@@ -1,28 +1,32 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../utils/api';
 
 export default function LoginScreen({ onLogin }) {
+  
+  /* Form States */
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  /* Loading State */
   const [loading, setLoading] = useState(false);
 
+  /*   Handle Login Submission   */
   const handleLogin = async () => {
+    /* email normalization */
     const emailLowered = email.toLowerCase().trim();
-    console.log('Attempting login with email:', emailLowered);
     setLoading(true);
     try {
+      /* API Call to authenticate user */
       const response = await api.post('/auth/login', {
         email: emailLowered,
         password,
         clientType: 'mobile'
       });
-      // console.log('Login response:', response.data.data.token);
+      
       if (response.data.data && response.data.data.token) {
-        console.log('Login response:', response.data.data.user);
-        // console.log('Login successful, token:', response.data.data.token);
-        onLogin(response.data.data.token,response.data.data.user);
+        onLogin(response.data.data.token, response.data.data.user);
         Alert.alert('Login Successful', 'You have been logged in successfully.');
       } else {
         Alert.alert('Login Failed', response.data.message || 'Invalid credentials');
@@ -36,8 +40,8 @@ export default function LoginScreen({ onLogin }) {
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor={styles.statusBar.backgroundColor} />
-      <KeyboardAvoidingView 
-        style={styles.keyboardAvoidingView} 
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.container}>
@@ -47,6 +51,7 @@ export default function LoginScreen({ onLogin }) {
           </View>
 
           <View style={styles.formContainer}>
+
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Email</Text>
               <View style={styles.inputWrapper}>
@@ -60,7 +65,7 @@ export default function LoginScreen({ onLogin }) {
                   value={email}
                   onChangeText={setEmail}
                 />
-              </View>
+              </View>              
             </View>
 
             <View style={styles.inputContainer}>
@@ -78,9 +83,9 @@ export default function LoginScreen({ onLogin }) {
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]} 
-              onPress={handleLogin} 
+            <TouchableOpacity
+              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+              onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.8}
             >
@@ -88,6 +93,7 @@ export default function LoginScreen({ onLogin }) {
                 {loading ? 'Signing in...' : 'Sign In'}
               </Text>
             </TouchableOpacity>
+            
           </View>
 
           <View style={styles.footerContainer}>
