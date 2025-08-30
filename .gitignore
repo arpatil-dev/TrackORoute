@@ -35,7 +35,6 @@ server/logs/
 **/temp/
 
 # Package manager
-package-lock.json
 yarn.lock
 
 # IDE and OS
