@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator, Animated, Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -210,7 +211,10 @@ function LogoutScreen({ onLogout, token }) {
         <View style={styles.tokenCard}>
           <View style={styles.tokenHeader}>
             <Text style={styles.tokenTitle}>Session Token</Text>
-            <Text style={styles.tokenStatus}>🟢 Active</Text>
+            <View style={styles.tokenStatusContainer}>
+              <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+              <Text style={styles.tokenStatus}>Active</Text>
+            </View>
           </View>
           <Text style={styles.tokenValue}>{truncatedToken}</Text>
           <Text style={styles.tokenDescription}>
@@ -224,7 +228,10 @@ function LogoutScreen({ onLogout, token }) {
           onPress={onLogout}
           activeOpacity={0.8}
         >
-          <Text style={styles.logoutButtonText}>🚪 Sign Out</Text>
+          <View style={styles.logoutButtonContent}>
+            <Ionicons name="log-out-outline" size={20} color="#ffffff" />
+            <Text style={styles.logoutButtonText}>Sign Out</Text>
+          </View>
         </TouchableOpacity>
 
         {/* App Info */}
@@ -392,6 +399,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1e293b',
   },
+  tokenStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   tokenStatus: {
     fontSize: 12,
     color: '#10b981',
@@ -428,6 +440,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  logoutButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   logoutButtonText: {
     fontSize: 16,
