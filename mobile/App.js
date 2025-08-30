@@ -123,7 +123,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="MainTabs" options={{ headerShown: false }}>
+        <Stack.Screen name="Trip History" options={{ headerShown: false }}>
           {() => (
             <Tab.Navigator
               screenOptions={{
