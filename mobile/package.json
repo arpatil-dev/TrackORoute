@@ -1,6 +1,9 @@
 {
-  "name": "mobile",
+  "name": "trackoroute-mobile",
   "version": "1.0.0",
+  "description": "Professional GPS tracking and route management mobile app",
+  "author": "Aryan Patil aryanrpatil2023@gmail.com",
+  "license": "MIT",
   "main": "index.js",
   "scripts": {
     "start": "expo start",

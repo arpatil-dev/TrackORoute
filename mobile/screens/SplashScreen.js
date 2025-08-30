@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, StatusBar, Animated } from 'react-native';
-
+import { View, Text, StyleSheet, StatusBar, Animated, Image } from 'react-native';
+import splashIcon from '../assets/splash-icon-1.png';
 export default function SplashScreen({ onSplashComplete }) {
   // Minimal animation values
   const logoScale = useRef(new Animated.Value(0.5)).current;
@@ -71,7 +71,11 @@ export default function SplashScreen({ onSplashComplete }) {
           {/* Logo */}
           <View style={styles.logoContainer}>
             <Animated.View style={[styles.logoIcon, { transform: [{ scale: logoScale }] }]}>
-              <Text style={styles.logoIconText}>📍</Text>
+              <Image 
+                source={splashIcon} 
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </Animated.View>
           </View>
 
@@ -121,7 +125,7 @@ const styles = StyleSheet.create({
   logoIcon: {
     width: 80,
     height: 80,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#ffffff',
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
@@ -134,8 +138,9 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 12,
   },
-  logoIconText: {
-    fontSize: 36,
+  logoImage: {
+    width: 60,
+    height: 60,
   },
   appnameContainer: {
     marginBottom: 12,
