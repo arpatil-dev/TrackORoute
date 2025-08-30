@@ -135,9 +135,11 @@ export default function App() {
                 name="Track"
                 options={{
                   tabBarIcon: ({ focused }) => (
-                    <Text style={[styles.tabIcon, { color: focused ? '#3b82f6' : '#64748b' }]}>
-                      🚀
-                    </Text>
+                    <Ionicons 
+                      name="navigate-outline" 
+                      size={24} 
+                      color={focused ? '#3b82f6' : '#64748b'} 
+                    />
                   ),
                 }}
               >
@@ -147,9 +149,11 @@ export default function App() {
                 name="History"
                 options={{
                   tabBarIcon: ({ focused }) => (
-                    <Text style={[styles.tabIcon, { color: focused ? '#3b82f6' : '#64748b' }]}>
-                      📋
-                    </Text>
+                    <Ionicons 
+                      name="time-outline" 
+                      size={24} 
+                      color={focused ? '#3b82f6' : '#64748b'} 
+                    />
                   ),
                 }}
               >
@@ -159,9 +163,11 @@ export default function App() {
                 name="Profile"
                 options={{
                   tabBarIcon: ({ focused }) => (
-                    <Text style={[styles.tabIcon, { color: focused ? '#3b82f6' : '#64748b' }]}>
-                      👤
-                    </Text>
+                    <Ionicons 
+                      name="person-outline" 
+                      size={24} 
+                      color={focused ? '#3b82f6' : '#64748b'} 
+                    />
                   ),
                 }}
               >
@@ -266,7 +272,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
     height: 80,
-    paddingBottom: 20,
+    paddingBottom: 10,
     paddingTop: 10,
     shadowColor: '#000',
     shadowOffset: {
@@ -280,10 +286,13 @@ const styles = StyleSheet.create({
   tabBarLabel: {
     fontSize: 12,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 2,
   },
   tabBarItem: {
-    paddingVertical: 8,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 0,
   },
   tabIcon: {
     fontSize: 24,
