@@ -324,8 +324,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   checkInButton: {
-    backgroundColor: '#10b981',
-    shadowColor: '#10b981',
+    backgroundColor: '#3b82f6',
+    shadowColor: '#3b82f6',
   },
   checkOutButton: {
     backgroundColor: '#ef4444',
