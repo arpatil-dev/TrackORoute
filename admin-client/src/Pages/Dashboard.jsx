@@ -173,7 +173,7 @@ export default function Dashboard() {
                       <input
                         type="text"
                         name="firstName"
-                        placeholder="John"
+                        placeholder="Aryan"
                         value={formData.firstName}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-slate-50 hover:bg-white focus:bg-white"
@@ -185,7 +185,7 @@ export default function Dashboard() {
                       <input
                         type="text"
                         name="lastName"
-                        placeholder="Doe"
+                        placeholder="Patil"
                         value={formData.lastName}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-slate-50 hover:bg-white focus:bg-white"
@@ -200,7 +200,7 @@ export default function Dashboard() {
                     <input
                       type="text"
                       name="phone"
-                      placeholder="+1 (555) 123-4567"
+                      placeholder="+91 8208158347"
                       value={formData.phone}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-slate-50 hover:bg-white focus:bg-white"
@@ -214,7 +214,7 @@ export default function Dashboard() {
                     <input
                       type="text"
                       name="address"
-                      placeholder="123 Main St, City, State"
+                      placeholder="Kolhapur"
                       value={formData.address}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-slate-50 hover:bg-white focus:bg-white"
@@ -228,7 +228,7 @@ export default function Dashboard() {
                     <input
                       type="email"
                       name="email"
-                      placeholder="john@example.com"
+                      placeholder="aryan@gmail.com"
                       value={formData.email}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-slate-50 hover:bg-white focus:bg-white"
