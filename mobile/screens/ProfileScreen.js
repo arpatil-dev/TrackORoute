@@ -1,28 +1,32 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ onLogout, token, user }) {
+    /* Logout Loading State */
     const [loggingOut, setLoggingOut] = useState(false);
     const truncatedToken = token ? `${token.substring(0, 20)}...` : '';
-    console.log("asdsad"+user)
-    // Default user data if not provided
+    
+    /* Default user data if not provided */
     const userData = user || {
         name: 'TrackORoute User',
         email: 'user@trackoroute.com',
-        phone: '+91 0000000000',
+        phone: '+910000000000',
         profilePicture: null
     };
 
+    /* Handle Logout */
     const handleLogout = async () => {
         setLoggingOut(true);
         try {
+            /* await logout function passed via props */
             await onLogout();
         } finally {
             setLoggingOut(false);
         }
     };
 
+    /* Format name from first and last names */
     const getName = (firstName, lastName) => {
         if (!firstName && !lastName) return 'TrackORoute User';
         if (!firstName) return lastName;
@@ -30,11 +34,11 @@ export default function ProfileScreen({ onLogout, token, user }) {
         return `${firstName} ${lastName}`;
     }
 
-
     return (
         <>
             <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
             <View style={styles.profileContainer}>
+                
                 {/* Header Section */}
                 <View style={styles.profileHeaderContainer}>
                     <Text style={styles.profileTitle}>Profile</Text>
