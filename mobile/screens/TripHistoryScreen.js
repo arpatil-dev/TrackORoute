@@ -1,29 +1,36 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, RefreshControl } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../utils/api';
 
 export default function TripHistoryScreen({ token }) {
+  /* Trip Data State */
   const [trips, setTrips] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  /* Pull-to-refresh State */
   const [refreshing, setRefreshing] = useState(false);
+
+  /* Navigation */
   const navigation = useNavigation();
 
+  /* Loading State */
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    // console.log('TripHistoryScreen mounted, fetching trips...');
+    /* Initial fetch of trips */
     fetchTrips();
   }, [token]);
 
+  /* Fetch trips from API */
   const fetchTrips = async () => {
     try {
-      // console.log('Fetching trips with token:', token);
-      const res = await api.get('/trips?userId=me',{
+      /* await api call to get trips */
+      const res = await api.get('/trips?userId=me', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // console.log('Fetched trips:', res.data);
+
+      /* Update state with fetched trips */
       setTrips(res.data.data.trips || []);
     } catch (err) {
       setTrips([]);
@@ -31,40 +38,47 @@ export default function TripHistoryScreen({ token }) {
     setLoading(false);
   };
 
+  /* Pull-to-refresh handler */
   const onRefresh = async () => {
     setRefreshing(true);
+    /* await api call to fetch and refresh trips */
     await fetchTrips();
     setRefreshing(false);
   };
 
+  /* Format date to readable string */
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown date';
     const date = new Date(dateString);
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
+    /* Human-friendly date formatting */
     if (diffDays === 1) return 'Today';
     if (diffDays === 2) return 'Yesterday';
     if (diffDays <= 7) return `${diffDays - 1} days ago`;
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 
+  /* Format time to readable string */
   const formatTime = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    /* 12-hour time format */
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
+  /* Render individual trip item */
   const renderTrip = ({ item, index }) => (
     <TouchableOpacity
       style={styles.tripCard}
@@ -95,7 +109,7 @@ export default function TripHistoryScreen({ token }) {
           </View>
         </View>
       </View>
-      
+
       <View style={styles.tripFooter}>
         <View style={styles.statusIndicator}>
           <View style={[styles.statusDot, { backgroundColor: '#10b981' }]} />
@@ -110,11 +124,12 @@ export default function TripHistoryScreen({ token }) {
     <>
       <StatusBar barStyle="light-content" backgroundColor={styles.statusBar.backgroundColor} />
       <View style={styles.container}>
+
         {/* Header Section */}
         <View style={styles.headerContainer}>
           <Text style={styles.title}>Trip History</Text>
           <Text style={styles.subtitle}>
-            {trips.length > 0 
+            {trips.length > 0
               ? `${trips.length} trip${trips.length !== 1 ? 's' : ''} recorded`
               : 'Your travel journey awaits'
             }
