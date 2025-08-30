@@ -63,3 +63,41 @@ export const removeUser = async () => {
     console.error('Error removing user data', e);
   }
 };
+
+export const storeTripId = async (tripId) => {
+  try {
+    /* Save the trip ID in AsyncStorage */
+    await AsyncStorage.setItem('tripId', tripId);
+  } catch (e) {
+    console.error('Error saving tripId', e);
+  }
+};
+
+export const getTripId = async () => {
+  try {
+    /* Get the trip ID from AsyncStorage */
+    const value = await AsyncStorage.getItem('tripId');
+    return value;
+  } catch (e) {
+    console.error('Error reading tripId', e);
+    return null;
+  } 
+};
+
+export const removeTripId = async () => {
+  try {
+    /* Remove the trip ID from AsyncStorage */
+    await AsyncStorage.removeItem('tripId');
+  } catch (e) {
+    console.error('Error removing tripId', e);
+  }
+};
+
+/* Clear all stored data (token, user, tripId) */
+export const clearAllStorage = async () => {
+  try { 
+    await AsyncStorage.multiRemove(['jwtToken', 'userData', 'tripId']);
+  } catch (e) {
+    console.error('Error clearing storage', e);
+  }
+};

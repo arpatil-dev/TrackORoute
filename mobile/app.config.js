@@ -15,7 +15,7 @@ export default {
     splash: {
       image: "./assets/splash-icon-1.png",
       resizeMode: "contain",
-      backgroundColor: "#3b82f6"
+      backgroundColor: "#fff"
     },
 
     ios: {
@@ -34,7 +34,7 @@ export default {
       versionCode: 1,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon-1.png",
-        backgroundColor: "#3b82f6"
+        backgroundColor: "#fff"
       },
       edgeToEdgeEnabled: true,
       permissions: [
@@ -56,7 +56,6 @@ export default {
     },
 
     plugins: [
-      "expo-secure-store",
       [
         "expo-location",
         {

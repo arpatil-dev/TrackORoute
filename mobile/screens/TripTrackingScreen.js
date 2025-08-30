@@ -1,11 +1,34 @@
 import React, { useState, useRef } from 'react';
+import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
+import { requestBackgroundLocationPermissions, startBackgroundLocationUpdates, stopBackgroundLocationUpdates } from '../utils/backgroundLocation';
 import api from '../utils/api';
+import { storeTripId } from '../utils/storage';
 
 export default function TripTrackingScreen({ token }) {
+  // Track app state for foreground/background transitions
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      // When app comes to foreground and trip is active, fetch all locations from backend
+      if (nextAppState === 'active' && tracking && tripId) {
+        try {
+          const res = await api.get(`/trips/${tripId}/locations`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          // Assuming backend returns array of locations [{ latitude, longitude, timestamp }]
+          setLiveLocations(res.data.locations.map(loc => ({ latitude: loc.latitude, longitude: loc.longitude })));
+          setLocationLogs(res.data.locations.map(loc => ({ latitude: loc.latitude, longitude: loc.longitude, timestamp: loc.timestamp, sent: true })));
+        } catch (err) {
+          console.error('Failed to fetch trip locations:', err);
+        }
+      }
+    });
+    return () => subscription.remove();
+  }, [tracking, tripId, token]);
   /* State for trip tracking */
   const [tracking, setTracking] = useState(false);
 
@@ -40,26 +63,24 @@ export default function TripTrackingScreen({ token }) {
     setInputTripName('');
     setCheckingIn(true);
     try {
-      /* Request location permissions and start trip */
+      // Request foreground and background location permissions
       await requestLocationPermissions();
+      await requestBackgroundLocationPermissions();
 
-      /* Start trip in backend with Bearer token and tripName*/
+      // Start trip in backend with Bearer token and tripName
       const res = await api.post('/trips/start', { "tripName": inputTripName.trim() }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      /* Trip started successfully, save tripId */
+      // Trip started successfully, save tripId
       setTripId(res.data.data.tripId);
-
-      /* Location Subscription: Start receiving location updates */
+      storeTripId(res.data.data.tripId);
+      // Start foreground location updates
       locationSubscription.current = await startLocationUpdates(async (location) => {
-        /* Send location to backend with Bearer token */
         try {
-          /* Awaiting api call to send location */
           await api.post(`/trips/${res.data.data.tripId}/locations`, { locations: [location] }, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          /* Update location logs and live locations */
           setLocationLogs((prev) => [
             { ...location, sent: true },
             ...prev
@@ -72,6 +93,10 @@ export default function TripTrackingScreen({ token }) {
           ]);
         }
       });
+
+      // Start background location updates
+      await startBackgroundLocationUpdates();
+
       setTracking(true);
     } catch (err) {
       Alert.alert('Error', err.message || 'Could not start trip or get location permission');
@@ -84,16 +109,17 @@ export default function TripTrackingScreen({ token }) {
   const handleCheckOut = async () => {
     setCheckingOut(true);
     try {
-      /* Stop GPS tracking and notify backend */
+      // Stop foreground location updates
       if (locationSubscription.current) {
-        /* await stopLocationUpdates and clear subscription */
         await stopLocationUpdates(locationSubscription.current);
         locationSubscription.current = null;
       }
+
+      // Stop background location updates
+      await stopBackgroundLocationUpdates();
+
       if (tripId) {
-        /* Notify backend trip has ended */
         try {
-          /* await api call to stop trip */
           await api.post(`/trips/${tripId}/stop`, {}, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -105,7 +131,6 @@ export default function TripTrackingScreen({ token }) {
 
     /* Reset state */
     setTracking(false);
-    setTripName('');
     setTripId(null);
     setLiveLocations([]);
     setLocationLogs([]);
@@ -155,7 +180,7 @@ export default function TripTrackingScreen({ token }) {
                 )}
                 <Text style={[
                   styles.actionButtonText, 
-                  (tracking || checkingIn) && styles.disabledButtonText
+                  (!tracking || checkingOut) && styles.disabledButtonText
                 ]}>
                   {checkingIn ? 'Checking In...' : 'Check In'}
                 </Text>
