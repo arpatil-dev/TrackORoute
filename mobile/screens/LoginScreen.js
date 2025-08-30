@@ -9,10 +9,12 @@ export default function LoginScreen({ onLogin }) {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    const emailLowered = email.toLowerCase().trim();
+    console.log('Attempting login with email:', emailLowered);
     setLoading(true);
     try {
       const response = await api.post('/auth/login', {
-        email,
+        email: emailLowered,
         password,
         clientType: 'mobile'
       });
