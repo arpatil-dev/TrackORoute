@@ -1,6 +1,8 @@
+/* Required for React-native Navigation */
 import 'react-native-gesture-handler';
 
-import React, { useState, useEffect, useRef } from 'react';
+/* Core React and React Native imports */
+import { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
@@ -8,6 +10,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { storeToken, getToken, removeToken, storeUser, getUser, removeUser } from './utils/storage';
 
+/* Screen Imports */
 import LoginScreen from './screens/LoginScreen';
 import SplashScreen from './screens/SplashScreen';
 import TripTrackingScreen from './screens/TripTrackingScreen';
@@ -15,26 +18,31 @@ import TripHistoryScreen from './screens/TripHistoryScreen';
 import TripMapScreen from './screens/TripMapScreen';
 import ProfileScreen from './screens/ProfileScreen';
 
-
-
+/* Navigation Setup */
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-
+/* Main App Component */
 export default function App() {
+  /* Authentication State */
   const [token, setToken] = useState(null);
+
+  /* Loading and Splash States */
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  /* User Data State */
   const [user, setUser] = useState(null);
   
-  // Get screen width for slide animation
+  /* Get screen width for slide animation */
   const screenWidth = Dimensions.get('window').width;
   
-  // Animation values
+  /* Animation values */
   const splashTranslateX = useRef(new Animated.Value(0)).current;
   const loginTranslateX = useRef(new Animated.Value(screenWidth)).current;
 
+  /* Load token and user data from AsyncStorage on app start */
   useEffect(() => {
     // Load token and user data from AsyncStorage on app start
     const loadUserSession = async () => {
@@ -48,10 +56,11 @@ export default function App() {
     loadUserSession();
   }, []);
 
+  /* Handle completion of splash screen animation */
   const handleSplashComplete = () => {
     setIsTransitioning(true);
     
-    // Animate splash screen sliding left and login screen sliding in from right
+    /* Animate splash screen sliding left and login screen sliding in from right */
     Animated.parallel([
       Animated.timing(splashTranslateX, {
         toValue: -screenWidth,
@@ -64,19 +73,22 @@ export default function App() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      // Animation complete, hide splash screen
+      /* Animation complete, hide splash screen */
       setShowSplash(false);
       setIsTransitioning(false);
     });
   };
 
+  /* Handle successful login */
   const handleLogin = async (jwt, user) => {
     setToken(jwt);
     setUser(user);
+    /* Store token and user data in AsyncStorage */
     await storeToken(jwt);
     await storeUser(user);
   };
 
+  /* Handle logout */
   const handleLogout = async () => {
     setToken(null);
     setUser(null);
@@ -84,7 +96,7 @@ export default function App() {
     await removeUser();
   };
 
-  // Show splash screen first
+  /* Show splash screen first */
   if (showSplash || isTransitioning) {
     return (
       <View style={{ flex: 1, overflow: 'hidden' }}>
@@ -109,6 +121,7 @@ export default function App() {
     );
   }
 
+  /* Show loading indicator while checking auth state */
   if (loading) {
     return (
       <>
@@ -121,12 +134,13 @@ export default function App() {
     );
   }
 
+  /* Show login screen if not authenticated */
   if (!token) {
-    // Only show login screen until authenticated
     return <LoginScreen onLogin={handleLogin} />;
   }
 
   return (
+    /* Main App Navigation */
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="Trip History" options={{ headerShown: false }}>
