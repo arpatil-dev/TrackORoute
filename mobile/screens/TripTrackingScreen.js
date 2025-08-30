@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
 import api from '../utils/api';
@@ -16,6 +16,10 @@ export default function TripTrackingScreen({ token }) {
   const [locationLogs, setLocationLogs] = useState([]);
   const [liveLocations, setLiveLocations] = useState([]);
   const [tripId, setTripId] = useState(null);
+  
+  // Loading states
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   const handleCheckIn = () => {
     setModalVisible(true);
@@ -29,6 +33,7 @@ export default function TripTrackingScreen({ token }) {
     setModalVisible(false);
     setTripName(inputTripName.trim());
     setInputTripName('');
+    setCheckingIn(true);
     try {
       await requestLocationPermissions();
       // Start trip in backend with Bearer token
@@ -59,32 +64,42 @@ export default function TripTrackingScreen({ token }) {
       setTracking(true);
     } catch (err) {
       Alert.alert('Error', err.message || 'Could not start trip or get location permission');
+    } finally {
+      setCheckingIn(false);
     }
   };
 
   const handleCheckOut = async () => {
-    // Stop GPS tracking and notify backend
-    if (locationSubscription.current) {
-      await stopLocationUpdates(locationSubscription.current);
-      locationSubscription.current = null;
-    }
-    if (tripId) {
-        console.log('Trip ended with ID:', token);
-      try {
-        await api.post(`/trips/${tripId}/stop`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log('Trip stopped successfully');
-      } catch (err) {
-        Alert.alert('Error', err.message || 'Could not stop trip');
+    setCheckingOut(true);
+    try {
+      // Stop GPS tracking and notify backend
+      if (locationSubscription.current) {
+        await stopLocationUpdates(locationSubscription.current);
+        locationSubscription.current = null;
       }
+      if (tripId) {
+          console.log('Trip ended with ID:', token);
+        try {
+          await api.post(`/trips/${tripId}/stop`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          console.log('Trip stopped successfully');
+        } catch (err) {
+          Alert.alert('Error', err.message || 'Could not stop trip');
+          return;
+        }
+      }
+    setTracking(false);
+    setTripName('');
+    setTripId(null);
+    setLiveLocations([]);
+    setLocationLogs([]);
+    Alert.alert('Trip Ended', 'Your trip has been checked out.');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Could not end trip');
+    } finally {
+      setCheckingOut(false);
     }
-  setTracking(false);
-  setTripName('');
-  setTripId(null);
-  setLiveLocations([]);
-  setLocationLogs([]);
-  Alert.alert('Trip Ended', 'Your trip has been checked out.');
   };
 
   return (
@@ -106,29 +121,51 @@ export default function TripTrackingScreen({ token }) {
           {/* Action Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity 
-              style={[styles.actionButton, styles.checkInButton, tracking && styles.disabledButton]} 
+              style={[
+                styles.actionButton, 
+                styles.checkInButton, 
+                (tracking || checkingIn) && styles.disabledButton
+              ]} 
               onPress={handleCheckIn} 
-              disabled={tracking}
+              disabled={tracking || checkingIn}
               activeOpacity={0.8}
             >
               <View style={styles.buttonContent}>
-                <Ionicons name="log-in-outline" size={20} color="#ffffff" />
-                <Text style={[styles.actionButtonText, tracking && styles.disabledButtonText]}>
-                  Check In
+                {checkingIn ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Ionicons name="log-in-outline" size={20} color="#ffffff" />
+                )}
+                <Text style={[
+                  styles.actionButtonText, 
+                  (tracking || checkingIn) && styles.disabledButtonText
+                ]}>
+                  {checkingIn ? 'Checking In...' : 'Check In'}
                 </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.actionButton, styles.checkOutButton, !tracking && styles.disabledButton]} 
+              style={[
+                styles.actionButton, 
+                styles.checkOutButton, 
+                (!tracking || checkingOut) && styles.disabledButton
+              ]} 
               onPress={handleCheckOut} 
-              disabled={!tracking}
+              disabled={!tracking || checkingOut}
               activeOpacity={0.8}
             >
               <View style={styles.buttonContent}>
-                <Ionicons name="log-out-outline" size={20} color="#ffffff" />
-                <Text style={[styles.actionButtonText, !tracking && styles.disabledButtonText]}>
-                  Check Out
+                {checkingOut ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Ionicons name="log-out-outline" size={20} color="#ffffff" />
+                )}
+                <Text style={[
+                  styles.actionButtonText, 
+                  (!tracking || checkingOut) && styles.disabledButtonText
+                ]}>
+                  {checkingOut ? 'Checking Out...' : 'Check Out'}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -244,17 +281,28 @@ export default function TripTrackingScreen({ token }) {
             <View style={styles.modalButtonContainer}>
               <TouchableOpacity 
                 onPress={() => { setModalVisible(false); setInputTripName(''); }} 
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButton, styles.cancelButton, checkingIn && styles.disabledButton]}
                 activeOpacity={0.8}
+                disabled={checkingIn}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, checkingIn && styles.disabledButtonText]}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 onPress={startTripWithName} 
-                style={[styles.modalButton, styles.startButton]}
+                style={[styles.modalButton, styles.startButton, checkingIn && styles.disabledButton]}
                 activeOpacity={0.8}
+                disabled={checkingIn}
               >
-                <Text style={styles.startButtonText}>Start Trip</Text>
+                <View style={styles.buttonContent}>
+                  {checkingIn && (
+                    <ActivityIndicator size="small" color="#ffffff" style={styles.modalButtonSpinner} />
+                  )}
+                  <Text style={[styles.startButtonText, checkingIn && styles.disabledButtonText]}>
+                    {checkingIn ? 'Starting...' : 'Start Trip'}
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -556,5 +604,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  modalButtonSpinner: {
+    marginRight: 8,
   },
 });

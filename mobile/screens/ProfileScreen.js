@@ -1,16 +1,26 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ onLogout, token, user }) {
+    const [loggingOut, setLoggingOut] = useState(false);
     const truncatedToken = token ? `${token.substring(0, 20)}...` : '';
-    console.log(user)
+    console.log("asdsad"+user)
     // Default user data if not provided
     const userData = user || {
         name: 'TrackORoute User',
         email: 'user@trackoroute.com',
         phone: '+91 0000000000',
         profilePicture: null
+    };
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        try {
+            await onLogout();
+        } finally {
+            setLoggingOut(false);
+        }
     };
 
     const getName = (firstName, lastName) => {
@@ -71,13 +81,20 @@ export default function ProfileScreen({ onLogout, token, user }) {
 
                 {/* Logout Button */}
                 <TouchableOpacity
-                    style={styles.logoutButton}
-                    onPress={onLogout}
+                    style={[styles.logoutButton, loggingOut && styles.disabledButton]}
+                    onPress={handleLogout}
                     activeOpacity={0.8}
+                    disabled={loggingOut}
                 >
                     <View style={styles.logoutButtonContent}>
-                        <Ionicons name="log-out-outline" size={20} color="#ffffff" />
-                        <Text style={styles.logoutButtonText}>Sign Out</Text>
+                        {loggingOut ? (
+                            <ActivityIndicator size="small" color="#ffffff" />
+                        ) : (
+                            <Ionicons name="log-out-outline" size={20} color="#ffffff" />
+                        )}
+                        <Text style={[styles.logoutButtonText, loggingOut && styles.disabledButtonText]}>
+                            {loggingOut ? 'Signing Out...' : 'Sign Out'}
+                        </Text>
                     </View>
                 </TouchableOpacity>
 
@@ -273,5 +290,15 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#94a3b8',
         fontWeight: '400',
+    },
+
+    // Common Disabled Styles
+    disabledButton: {
+        backgroundColor: '#94a3b8',
+        shadowOpacity: 0.1,
+    },
+    disabledButtonText: {
+        color: '#ffffff',
+        opacity: 0.8,
     },
 });
