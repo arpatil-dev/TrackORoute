@@ -1,14 +1,18 @@
 import 'react-native-gesture-handler';
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator, Animated, Dimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import { storeToken, getToken, removeToken } from './utils/storage';
+
 import LoginScreen from './screens/LoginScreen';
+import SplashScreen from './screens/SplashScreen';
 import TripTrackingScreen from './screens/TripTrackingScreen';
 import TripHistoryScreen from './screens/TripHistoryScreen';
 import TripMapScreen from './screens/TripMapScreen';
-import { storeToken, getToken, removeToken } from './utils/storage';
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -17,6 +21,15 @@ const Stack = createStackNavigator();
 export default function App() {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  // Get screen width for slide animation
+  const screenWidth = Dimensions.get('window').width;
+  
+  // Animation values
+  const splashTranslateX = useRef(new Animated.Value(0)).current;
+  const loginTranslateX = useRef(new Animated.Value(screenWidth)).current;
 
   useEffect(() => {
     // Load token from AsyncStorage on app start
@@ -28,6 +41,28 @@ export default function App() {
     loadToken();
   }, []);
 
+  const handleSplashComplete = () => {
+    setIsTransitioning(true);
+    
+    // Animate splash screen sliding left and login screen sliding in from right
+    Animated.parallel([
+      Animated.timing(splashTranslateX, {
+        toValue: -screenWidth,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(loginTranslateX, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Animation complete, hide splash screen
+      setShowSplash(false);
+      setIsTransitioning(false);
+    });
+  };
+
   const handleLogin = async (jwt) => {
     setToken(jwt);
     await storeToken(jwt);
@@ -37,6 +72,31 @@ export default function App() {
     setToken(null);
     await removeToken();
   };
+
+  // Show splash screen first
+  if (showSplash || isTransitioning) {
+    return (
+      <View style={{ flex: 1, overflow: 'hidden' }}>
+        {/* Splash Screen */}
+        <Animated.View style={[
+          { flex: 1, position: 'absolute', width: '100%', height: '100%' },
+          { transform: [{ translateX: splashTranslateX }] }
+        ]}>
+          <SplashScreen onSplashComplete={handleSplashComplete} />
+        </Animated.View>
+        
+        {/* Login Screen (during transition) */}
+        {isTransitioning && (
+          <Animated.View style={[
+            { flex: 1, position: 'absolute', width: '100%', height: '100%' },
+            { transform: [{ translateX: loginTranslateX }] }
+          ]}>
+            <LoginScreen onLogin={handleLogin} />
+          </Animated.View>
+        )}
+      </View>
+    );
+  }
 
   if (loading) {
     return (
