@@ -16,6 +16,7 @@ import TripMapScreen from './screens/TripMapScreen';
 import ProfileScreen from './screens/ProfileScreen';
 
 
+
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -25,6 +26,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [user, setUser] = useState(null);
   
   // Get screen width for slide animation
   const screenWidth = Dimensions.get('window').width;
@@ -65,8 +67,9 @@ export default function App() {
     });
   };
 
-  const handleLogin = async (jwt) => {
+  const handleLogin = async (jwt,user) => {
     setToken(jwt);
+    setUser(user);
     await storeToken(jwt);
   };
 
@@ -172,7 +175,7 @@ export default function App() {
                   ),
                 }}
               >
-                {() => <ProfileScreen onLogout={handleLogout} token={token} />}
+                {() => <ProfileScreen onLogout={handleLogout} token={token} user={user} />}
               </Tab.Screen>
             </Tab.Navigator>
           )}

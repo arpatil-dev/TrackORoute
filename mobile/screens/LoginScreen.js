@@ -18,8 +18,9 @@ export default function LoginScreen({ onLogin }) {
       });
       // console.log('Login response:', response.data.data.token);
       if (response.data.data && response.data.data.token) {
+        console.log('Login response:', response.data.data.user);
         // console.log('Login successful, token:', response.data.data.token);
-        onLogin(response.data.data.token);
+        onLogin(response.data.data.token,response.data.data.user);
         Alert.alert('Login Successful', 'You have been logged in successfully.');
       } else {
         Alert.alert('Login Failed', response.data.message || 'Invalid credentials');

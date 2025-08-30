@@ -13,17 +13,17 @@ export default function TripHistoryScreen({ token }) {
   const navigation = useNavigation();
 
   useEffect(() => {
-    console.log('TripHistoryScreen mounted, fetching trips...');
+    // console.log('TripHistoryScreen mounted, fetching trips...');
     fetchTrips();
   }, [token]);
 
   const fetchTrips = async () => {
     try {
-      console.log('Fetching trips with token:', token);
+      // console.log('Fetching trips with token:', token);
       const res = await api.get('/trips?userId=me',{
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('Fetched trips:', res.data);
+      // console.log('Fetched trips:', res.data);
       setTrips(res.data.data.trips || []);
     } catch (err) {
       setTrips([]);
