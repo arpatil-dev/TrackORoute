@@ -1,29 +1,30 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, StatusBar, Animated, Image } from 'react-native';
 import splashIcon from '../assets/splash-icon-1.png';
+
 export default function SplashScreen({ onSplashComplete }) {
-  // Minimal animation values
+  /* Minimal animation values */
   const logoScale = useRef(new Animated.Value(0.5)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
   const loadingOpacity = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Simple sequence of animations
+    /* Simple sequence of animations */
     Animated.sequence([
-      // Logo scale animation
+      /* Logo scale animation */
       Animated.timing(logoScale, {
         toValue: 1,
         duration: 600,
         useNativeDriver: true,
       }),
-      // Text fade in
+      /* Text fade in */
       Animated.timing(textOpacity, {
         toValue: 1,
         duration: 400,
         useNativeDriver: true,
       }),
-      // Loading indicator fade in
+      /* Loading indicator fade in */
       Animated.timing(loadingOpacity, {
         toValue: 1,
         duration: 300,
@@ -31,7 +32,7 @@ export default function SplashScreen({ onSplashComplete }) {
       }),
     ]).start();
 
-    // Continuous pulsing animation for loading indicator
+    /* Continuous pulsing animation for loading indicator */
     const startPulse = () => {
       Animated.loop(
         Animated.sequence([
@@ -49,14 +50,15 @@ export default function SplashScreen({ onSplashComplete }) {
       ).start();
     };
 
-    // Start pulse after loading indicator appears
+    /* Start pulse after loading indicator appears */
     const pulseTimer = setTimeout(startPulse, 1000);
 
-    // Navigate after animations complete
+    /* Navigate after animations complete */
     const timer = setTimeout(() => {
       onSplashComplete();
     }, 2500);
 
+    /* Cleanup timers on unmount */
     return () => {
       clearTimeout(timer);
       clearTimeout(pulseTimer);
@@ -68,6 +70,7 @@ export default function SplashScreen({ onSplashComplete }) {
       <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       <View style={styles.container}>
         <View style={styles.contentContainer}>
+          
           {/* Logo */}
           <View style={styles.logoContainer}>
             <Animated.View style={[styles.logoIcon, { transform: [{ scale: logoScale }] }]}>
