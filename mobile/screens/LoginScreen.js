@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../utils/api';
 
 export default function LoginScreen({ onLogin }) {
@@ -44,27 +45,33 @@ export default function LoginScreen({ onLogin }) {
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor={styles.placeholderText.color}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-              />
+              <View style={styles.inputWrapper}>
+                <Ionicons name="mail-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.inputWithIcon}
+                  placeholder="Enter your email"
+                  placeholderTextColor={styles.placeholderText.color}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your password"
-                placeholderTextColor={styles.placeholderText.color}
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
+              <View style={styles.inputWrapper}>
+                <Ionicons name="lock-closed-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.inputWithIcon}
+                  placeholder="Enter your password"
+                  placeholderTextColor={styles.placeholderText.color}
+                  secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
+                />
+              </View>
             </View>
 
             <TouchableOpacity 
@@ -138,6 +145,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
   },
+  inputWrapper: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputIcon: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 1,
+  },
   input: {
     height: 56,
     backgroundColor: '#ffffff',
@@ -154,6 +171,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3.84,
     elevation: 2,
+  },
+  inputWithIcon: {
+    height: 56,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    paddingLeft: 48,
+    paddingRight: 20,
+    fontSize: 16,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3.84,
+    elevation: 2,
+    flex: 1,
   },
   placeholderText: {
     color: '#94a3b8',

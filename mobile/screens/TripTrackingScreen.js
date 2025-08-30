@@ -1,6 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
 import api from '../utils/api';
 import MapView, { Polyline, Marker } from 'react-native-maps';
@@ -109,9 +110,12 @@ export default function TripTrackingScreen({ token }) {
               disabled={tracking}
               activeOpacity={0.8}
             >
-              <Text style={[styles.actionButtonText, tracking && styles.disabledButtonText]}>
-                🚀 Check In
-              </Text>
+              <View style={styles.buttonContent}>
+                <Ionicons name="log-in-outline" size={20} color="#ffffff" />
+                <Text style={[styles.actionButtonText, tracking && styles.disabledButtonText]}>
+                  Check In
+                </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -120,9 +124,12 @@ export default function TripTrackingScreen({ token }) {
               disabled={!tracking}
               activeOpacity={0.8}
             >
-              <Text style={[styles.actionButtonText, !tracking && styles.disabledButtonText]}>
-                🏁 Check Out
-              </Text>
+              <View style={styles.buttonContent}>
+                <Ionicons name="log-out-outline" size={20} color="#ffffff" />
+                <Text style={[styles.actionButtonText, !tracking && styles.disabledButtonText]}>
+                  Check Out
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -172,7 +179,10 @@ export default function TripTrackingScreen({ token }) {
             <View style={styles.logsContainer}>
               {locationLogs.length === 0 ? (
                 <View style={styles.noLogsContainer}>
-                  <Text style={styles.noLogsText}>📍 No locations recorded yet</Text>
+                  <View style={styles.noLogsIconText}>
+                    <Ionicons name="location-outline" size={20} color="#64748b" />
+                    <Text style={styles.noLogsText}>No locations recorded yet</Text>
+                  </View>
                   <Text style={styles.noLogsSubtext}>Start tracking to see location data</Text>
                 </View>
               ) : (
@@ -325,6 +335,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#94a3b8',
     shadowOpacity: 0.1,
   },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   actionButtonText: {
     fontSize: 16,
     fontWeight: '600',
@@ -398,11 +414,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 32,
   },
+  noLogsIconText: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   noLogsText: {
     fontSize: 16,
     fontWeight: '500',
     color: '#64748b',
-    marginBottom: 4,
   },
   noLogsSubtext: {
     fontSize: 14,
