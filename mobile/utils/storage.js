@@ -28,3 +28,30 @@ export const removeToken = async () => {
     console.error('Error removing token', e);
   }
 };
+
+// User data storage functions
+export const storeUser = async (user) => {
+  try {
+    await AsyncStorage.setItem('userData', JSON.stringify(user));
+  } catch (e) {
+    console.error('Error saving user data', e);
+  }
+};
+
+export const getUser = async () => {
+  try {
+    const value = await AsyncStorage.getItem('userData');
+    return value ? JSON.parse(value) : null;
+  } catch (e) {
+    console.error('Error reading user data', e);
+    return null;
+  }
+};
+
+export const removeUser = async () => {
+  try {
+    await AsyncStorage.removeItem('userData');
+  } catch (e) {
+    console.error('Error removing user data', e);
+  }
+};

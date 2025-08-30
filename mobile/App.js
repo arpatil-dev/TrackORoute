@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { storeToken, getToken, removeToken } from './utils/storage';
+import { storeToken, getToken, removeToken, storeUser, getUser, removeUser } from './utils/storage';
 
 import LoginScreen from './screens/LoginScreen';
 import SplashScreen from './screens/SplashScreen';
@@ -36,13 +36,16 @@ export default function App() {
   const loginTranslateX = useRef(new Animated.Value(screenWidth)).current;
 
   useEffect(() => {
-    // Load token from AsyncStorage on app start
-    const loadToken = async () => {
+    // Load token and user data from AsyncStorage on app start
+    const loadUserSession = async () => {
       const storedToken = await getToken();
+      const storedUser = await getUser();
+      
       setToken(storedToken);
+      setUser(storedUser);
       setLoading(false);
     };
-    loadToken();
+    loadUserSession();
   }, []);
 
   const handleSplashComplete = () => {
@@ -67,15 +70,18 @@ export default function App() {
     });
   };
 
-  const handleLogin = async (jwt,user) => {
+  const handleLogin = async (jwt, user) => {
     setToken(jwt);
     setUser(user);
     await storeToken(jwt);
+    await storeUser(user);
   };
 
   const handleLogout = async () => {
     setToken(null);
+    setUser(null);
     await removeToken();
+    await removeUser();
   };
 
   // Show splash screen first
