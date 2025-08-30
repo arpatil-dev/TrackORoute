@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 
 export default function TripMapScreen({ route }) {
@@ -14,7 +15,7 @@ export default function TripMapScreen({ route }) {
       <>
         <StatusBar barStyle="light-content" backgroundColor={styles.statusBar.backgroundColor} />
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🗺️</Text>
+          <Ionicons name="map-outline" size={64} color="#94a3b8" />
           <Text style={styles.emptyTitle}>No Route Data</Text>
           <Text style={styles.emptySubtitle}>
             This trip doesn't have any location data to display
@@ -101,7 +102,7 @@ export default function TripMapScreen({ route }) {
               description="Starting point of your journey"
             >
               <View style={styles.startMarker}>
-                <Text style={styles.markerText}>🚀</Text>
+                <Ionicons name="flag-outline" size={24} color="#ffffff" />
               </View>
             </Marker>
             
@@ -112,7 +113,7 @@ export default function TripMapScreen({ route }) {
               description="End point of your journey"
             >
               <View style={styles.endMarker}>
-                <Text style={styles.markerText}>🏁</Text>
+                <Ionicons name="checkmark-circle" size={24} color="#ffffff" />
               </View>
             </Marker>
           </MapView>
@@ -125,7 +126,7 @@ export default function TripMapScreen({ route }) {
             onPress={fitToCoordinates}
             activeOpacity={0.8}
           >
-            <Text style={styles.controlButtonText}>📍</Text>
+            <Ionicons name="locate-outline" size={20} color="#3b82f6" />
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -133,7 +134,7 @@ export default function TripMapScreen({ route }) {
             onPress={toggleMapType}
             activeOpacity={0.8}
           >
-            <Text style={styles.controlButtonText}>🛰️</Text>
+            <Ionicons name="earth-outline" size={20} color="#3b82f6" />
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -141,7 +142,7 @@ export default function TripMapScreen({ route }) {
             onPress={() => setShowStats(!showStats)}
             activeOpacity={0.8}
           >
-            <Text style={styles.controlButtonText}>📊</Text>
+            <Ionicons name="stats-chart-outline" size={20} color="#3b82f6" />
           </TouchableOpacity>
         </View>
 
@@ -288,10 +289,11 @@ const styles = StyleSheet.create({
   // Controls Styles
   controlsContainer: {
     position: 'absolute',
-    top: 60,
-    right: 20,
+    top: 30,
+    right: 16,
     flexDirection: 'column',
     gap: 12,
+    paddingRight: 8,
   },
   controlButton: {
     width: 48,
