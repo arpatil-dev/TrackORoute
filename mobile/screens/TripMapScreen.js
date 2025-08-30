@@ -1,15 +1,19 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
+import MapView, { Polyline, Marker } from 'react-native-maps';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Polyline, Marker } from 'react-native-maps';
 
 export default function TripMapScreen({ route }) {
-  // Example: route.params.locations is an array of { latitude, longitude }
+  /* Example: route.params.locations is an array of { latitude, longitude } */
   const { locations = [] } = route.params || {};
+  /* Map reference for controlling the map */
   const mapRef = useRef(null);
+  /* Map type state: 'standard' or 'satellite' */
   const [mapType, setMapType] = useState('standard');
+  /* Show/hide statistics panel */
   const [showStats, setShowStats] = useState(true);
 
+  /* If no locations, show empty state */
   if (!locations.length) {
     return (
       <>
@@ -25,13 +29,16 @@ export default function TripMapScreen({ route }) {
     );
   }
 
+  /* Get start and end points */
   const start = locations[0];
   const end = locations[locations.length - 1];
 
-  // Calculate trip statistics
+  /* Calculate trip statistics */
   const calculateDistance = () => {
+    /* Need at least 2 points to calculate distance */
     if (locations.length < 2) return 0;
     
+    /* Calculations */
     let totalDistance = 0;
     for (let i = 1; i < locations.length; i++) {
       const prev = locations[i - 1];
@@ -49,13 +56,15 @@ export default function TripMapScreen({ route }) {
       const distance = R * c;
       totalDistance += distance;
     }
-    
+    /* Total distance in kilometers */
     return totalDistance;
   };
 
+  /* Trip statistics */
   const distance = calculateDistance();
   const points = locations.length;
 
+  /* Fit map to show all coordinates */
   const fitToCoordinates = () => {
     if (mapRef.current && locations.length > 0) {
       mapRef.current.fitToCoordinates(locations, {
@@ -65,6 +74,7 @@ export default function TripMapScreen({ route }) {
     }
   };
 
+  /* Toggle between standard and satellite map types */
   const toggleMapType = () => {
     setMapType(prevType => prevType === 'standard' ? 'satellite' : 'standard');
   };
@@ -73,6 +83,7 @@ export default function TripMapScreen({ route }) {
     <>
       <StatusBar barStyle="light-content" backgroundColor={styles.statusBar.backgroundColor} />
       <View style={styles.container}>
+
         {/* Map Container */}
         <View style={styles.mapContainer}>
           <MapView

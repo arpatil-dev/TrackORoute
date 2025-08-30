@@ -1,6 +1,5 @@
-
-import React, { useState, useRef } from 'react';
 import MapView, { Polyline, Marker } from 'react-native-maps';
+import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
 import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
 import { Ionicons } from '@expo/vector-icons';
@@ -228,7 +227,7 @@ export default function TripTrackingScreen({ token }) {
               </View>
             </View>
           )}
-  
+
           {/* Location Logs Section */}
           <View style={styles.logsSection}>
             <Text style={styles.logsTitle}>Location Logs</Text>
