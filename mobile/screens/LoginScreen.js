@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React,{ useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../utils/api';
@@ -93,7 +93,7 @@ export default function LoginScreen({ onLogin }) {
                 {loading ? 'Signing in...' : 'Sign In'}
               </Text>
             </TouchableOpacity>
-            
+
           </View>
 
           <View style={styles.footerContainer}>

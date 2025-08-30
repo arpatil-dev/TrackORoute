@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React,{ useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -38,7 +38,7 @@ export default function ProfileScreen({ onLogout, token, user }) {
         <>
             <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
             <View style={styles.profileContainer}>
-                
+
                 {/* Header Section */}
                 <View style={styles.profileHeaderContainer}>
                     <Text style={styles.profileTitle}>Profile</Text>

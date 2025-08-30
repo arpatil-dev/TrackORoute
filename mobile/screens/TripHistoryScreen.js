@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, RefreshControl } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, RefreshControl, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../utils/api';
@@ -79,20 +79,33 @@ export default function TripHistoryScreen({ token }) {
   };
 
   /* Render individual trip item */
-  const renderTrip = ({ item, index }) => (
-    <TouchableOpacity
-      style={styles.tripCard}
-      onPress={() => navigation.navigate('TripMap', { locations: item.locations })}
-      activeOpacity={0.8}
-    >
-      <View style={styles.tripHeader}>
-        <View style={styles.tripIcon}>
-          <Ionicons name="map-outline" size={24} color="#3b82f6" />
-        </View>
-        <View style={styles.tripInfo}>
-          <Text style={styles.tripName} numberOfLines={1}>
-            {item.tripName || 'Unnamed Trip'}
-          </Text>
+  const renderTrip = ({ item, index }) => {
+    /* Safe navigation with location validation */
+    const handleTripPress = () => {
+      const locations = item.locations || [];
+      /* Only navigate if we have valid locations */
+      if (locations.length > 0) {
+        navigation.navigate('TripMap', { locations });
+      } else {
+        /* Show alert if no location data */
+        Alert.alert('No Location Data', 'This trip doesn\'t have any location data to display on the map.');
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        style={styles.tripCard}
+        onPress={handleTripPress}
+        activeOpacity={0.8}
+      >
+        <View style={styles.tripHeader}>
+          <View style={styles.tripIcon}>
+            <Ionicons name="map-outline" size={24} color="#3b82f6" />
+          </View>
+          <View style={styles.tripInfo}>
+            <Text style={styles.tripName} numberOfLines={1}>
+              {item.tripName || 'Unnamed Trip'}
+            </Text>
           <View style={styles.tripMeta}>
             <Text style={styles.tripDate}>
               {formatDate(item.startedAt)}
@@ -118,7 +131,8 @@ export default function TripHistoryScreen({ token }) {
         <Text style={styles.viewMapText}>View on Map →</Text>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <>

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

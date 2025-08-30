@@ -2,14 +2,21 @@ import * as Location from 'expo-location';
 /* expo-location is used for accessing device location services */
 /* Request location permissions from the user */
 export async function requestLocationPermissions() {
-  /* Request foreground location permissions */
-  let { status } = await Location.requestForegroundPermissionsAsync();
-  /* If not granted, throw an error */
-  if (status !== 'granted') {
-    throw new Error('Permission to access location was denied');
+  try {
+    /* Request foreground location permissions */
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    
+    /* If not granted, throw a descriptive error */
+    if (status !== 'granted') {
+      throw new Error('Location permission is required to track your trips');
+    }
+    
+    /* If granted, return true*/
+    return true;
+  } catch (error) {
+    console.error('Location permission error:', error);
+    throw new Error('Failed to get location permission: ' + error.message);
   }
-  /* If granted, return true*/
-  return true;
 }
 
 /* Get the current location of the device */

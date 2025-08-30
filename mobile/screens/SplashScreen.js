@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import React,{ useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, StatusBar, Animated, Image } from 'react-native';
 import splashIcon from '../assets/splash-icon-1.png';
 
@@ -70,7 +70,7 @@ export default function SplashScreen({ onSplashComplete }) {
       <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       <View style={styles.container}>
         <View style={styles.contentContainer}>
-          
+
           {/* Logo */}
           <View style={styles.logoContainer}>
             <Animated.View style={[styles.logoIcon, { transform: [{ scale: logoScale }] }]}>

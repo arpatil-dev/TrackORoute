@@ -2,7 +2,7 @@
 import 'react-native-gesture-handler';
 
 /* Core React and React Native imports */
-import { useState, useEffect, useRef } from 'react';
+import React,{ useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
