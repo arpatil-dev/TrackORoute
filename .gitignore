@@ -19,7 +19,6 @@ admin-client/.env.*
 .env.*
 
 # API Keys and Sensitive Config
-**/app.json
 **/google-services.json
 **/GoogleService-Info.plist
 
