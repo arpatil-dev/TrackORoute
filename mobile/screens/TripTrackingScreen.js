@@ -1,30 +1,36 @@
 
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
-import api from '../utils/api';
 import MapView, { Polyline, Marker } from 'react-native-maps';
+import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
+import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
+import { Ionicons } from '@expo/vector-icons';
+import api from '../utils/api';
 
 export default function TripTrackingScreen({ token }) {
-  // State for trip tracking
+  /* State for trip tracking */
   const [tracking, setTracking] = useState(false);
+
+  /* State for trip details */
   const [tripName, setTripName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [inputTripName, setInputTripName] = useState('');
+
+  /* State for location data */
   const locationSubscription = useRef(null);
   const [locationLogs, setLocationLogs] = useState([]);
   const [liveLocations, setLiveLocations] = useState([]);
   const [tripId, setTripId] = useState(null);
   
-  // Loading states
+  /* Loading states */
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
 
+  /* Modal handlers */
   const handleCheckIn = () => {
     setModalVisible(true);
   };
 
+  /* Start trip with given name */
   const startTripWithName = async () => {
     if (!inputTripName.trim()) {
       Alert.alert('Error', 'Trip name cannot be empty');
@@ -35,20 +41,26 @@ export default function TripTrackingScreen({ token }) {
     setInputTripName('');
     setCheckingIn(true);
     try {
+      /* Request location permissions and start trip */
       await requestLocationPermissions();
-      // Start trip in backend with Bearer token
+
+      /* Start trip in backend with Bearer token and tripName*/
       const res = await api.post('/trips/start', { "tripName": inputTripName.trim() }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('Trip started with ID:', res.data.data.tripId);
+
+      /* Trip started successfully, save tripId */
       setTripId(res.data.data.tripId);
-      // Start location updates
+
+      /* Location Subscription: Start receiving location updates */
       locationSubscription.current = await startLocationUpdates(async (location) => {
-        // Send location to backend with Bearer token
+        /* Send location to backend with Bearer token */
         try {
+          /* Awaiting api call to send location */
           await api.post(`/trips/${res.data.data.tripId}/locations`, { locations: [location] }, {
             headers: { Authorization: `Bearer ${token}` }
           });
+          /* Update location logs and live locations */
           setLocationLogs((prev) => [
             { ...location, sent: true },
             ...prev
@@ -69,31 +81,37 @@ export default function TripTrackingScreen({ token }) {
     }
   };
 
+  /* Handle trip checkout */
   const handleCheckOut = async () => {
     setCheckingOut(true);
     try {
-      // Stop GPS tracking and notify backend
+      /* Stop GPS tracking and notify backend */
       if (locationSubscription.current) {
+        /* await stopLocationUpdates and clear subscription */
         await stopLocationUpdates(locationSubscription.current);
         locationSubscription.current = null;
       }
       if (tripId) {
-          console.log('Trip ended with ID:', token);
+        /* Notify backend trip has ended */
         try {
+          /* await api call to stop trip */
           await api.post(`/trips/${tripId}/stop`, {}, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          console.log('Trip stopped successfully');
         } catch (err) {
           Alert.alert('Error', err.message || 'Could not stop trip');
           return;
         }
       }
+
+    /* Reset state */
     setTracking(false);
     setTripName('');
     setTripId(null);
     setLiveLocations([]);
     setLocationLogs([]);
+
+    /* Notify user that trip has ended*/
     Alert.alert('Trip Ended', 'Your trip has been checked out.');
     } catch (err) {
       Alert.alert('Error', err.message || 'Could not end trip');
@@ -210,7 +228,7 @@ export default function TripTrackingScreen({ token }) {
               </View>
             </View>
           )}
-
+  
           {/* Location Logs Section */}
           <View style={styles.logsSection}>
             <Text style={styles.logsTitle}>Location Logs</Text>
