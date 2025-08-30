@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { Platform } from 'react-native';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
@@ -63,9 +64,15 @@ export default function TripTrackingScreen({ token }) {
     setInputTripName('');
     setCheckingIn(true);
     try {
-      // Request foreground and background location permissions
-      await requestLocationPermissions();
-      await requestBackgroundLocationPermissions();
+      // Platform-specific location permission and tracking logic
+      if (Platform.OS === 'android') {
+        // Android: request both foreground and background permissions, start both services
+        await requestLocationPermissions();
+        await requestBackgroundLocationPermissions();
+      } else {
+        // iOS: only request foreground permission
+        await requestLocationPermissions();
+      }
 
       // Start trip in backend with Bearer token and tripName
       const res = await api.post('/trips/start', { "tripName": inputTripName.trim() }, {
@@ -94,8 +101,10 @@ export default function TripTrackingScreen({ token }) {
         }
       });
 
-      // Start background location updates
-      await startBackgroundLocationUpdates();
+      // Only start background location updates on Android
+      if (Platform.OS === 'android') {
+        await startBackgroundLocationUpdates();
+      }
 
       setTracking(true);
     } catch (err) {
@@ -115,8 +124,10 @@ export default function TripTrackingScreen({ token }) {
         locationSubscription.current = null;
       }
 
-      // Stop background location updates
-      await stopBackgroundLocationUpdates();
+      // Only stop background location updates on Android
+      if (Platform.OS === 'android') {
+        await stopBackgroundLocationUpdates();
+      }
 
       if (tripId) {
         try {
@@ -129,14 +140,14 @@ export default function TripTrackingScreen({ token }) {
         }
       }
 
-    /* Reset state */
-    setTracking(false);
-    setTripId(null);
-    setLiveLocations([]);
-    setLocationLogs([]);
+      /* Reset state */
+      setTracking(false);
+      setTripId(null);
+      setLiveLocations([]);
+      setLocationLogs([]);
 
-    /* Notify user that trip has ended*/
-    Alert.alert('Trip Ended', 'Your trip has been checked out.');
+      /* Notify user that trip has ended*/
+      Alert.alert('Trip Ended', 'Your trip has been checked out.');
     } catch (err) {
       Alert.alert('Error', err.message || 'Could not end trip');
     } finally {
