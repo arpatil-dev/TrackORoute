@@ -35,7 +35,6 @@ server/logs/
 
 # Package manager
 yarn.lock
-package-lock.json
 
 # IDE and OS
 .vscode/
