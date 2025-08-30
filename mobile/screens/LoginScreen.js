@@ -13,7 +13,8 @@ export default function LoginScreen({ onLogin }) {
     try {
       const response = await api.post('/auth/login', {
         email,
-        password
+        password,
+        clientType: 'mobile'
       });
       // console.log('Login response:', response.data.data.token);
       if (response.data.data && response.data.data.token) {
