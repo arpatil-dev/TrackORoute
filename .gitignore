@@ -1,12 +1,12 @@
 # Node
 node_modules
-npm-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-error.log*
 
 # Expo
-.expo
-.expo-shared
-mobile/app.json
+.expo/
+.expo-shared/
+mobile/app.json   # ignore only real app.json, keep app.config.js
 mobile/.env
 mobile/.env.*
 
@@ -23,8 +23,8 @@ admin-client/.env.*
 **/GoogleService-Info.plist
 
 # Build artifacts
-mobile/dist
-admin-client/dist
+mobile/dist/
+admin-client/dist/
 
 # Server uploads and temporary files
 server/uploads/
@@ -35,6 +35,7 @@ server/logs/
 
 # Package manager
 yarn.lock
+package-lock.json
 
 # IDE and OS
 .vscode/
