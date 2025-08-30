@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function TripMapScreen({ route }) {
   /* Example: route.params.locations is an array of { latitude, longitude } */
-  const { locations = [] } = route.params || {};
+  const { locations = [] } = route?.params || {};
   /* Map reference for controlling the map */
   const mapRef = useRef(null);
   /* Map type state: 'standard' or 'satellite' */
@@ -13,8 +13,17 @@ export default function TripMapScreen({ route }) {
   /* Show/hide statistics panel */
   const [showStats, setShowStats] = useState(true);
 
-  /* If no locations, show empty state */
-  if (!locations.length) {
+  /* Validate locations data */
+  const validLocations = locations.filter(loc => 
+    loc && 
+    typeof loc.latitude === 'number' && 
+    typeof loc.longitude === 'number' &&
+    !isNaN(loc.latitude) && 
+    !isNaN(loc.longitude)
+  );
+
+  /* If no valid locations, show empty state */
+  if (!validLocations.length) {
     return (
       <>
         <StatusBar barStyle="light-content" backgroundColor={styles.statusBar.backgroundColor} />
@@ -30,19 +39,19 @@ export default function TripMapScreen({ route }) {
   }
 
   /* Get start and end points */
-  const start = locations[0];
-  const end = locations[locations.length - 1];
+  const start = validLocations[0];
+  const end = validLocations[validLocations.length - 1];
 
   /* Calculate trip statistics */
   const calculateDistance = () => {
     /* Need at least 2 points to calculate distance */
-    if (locations.length < 2) return 0;
+    if (validLocations.length < 2) return 0;
     
     /* Calculations */
     let totalDistance = 0;
-    for (let i = 1; i < locations.length; i++) {
-      const prev = locations[i - 1];
-      const curr = locations[i];
+    for (let i = 1; i < validLocations.length; i++) {
+      const prev = validLocations[i - 1];
+      const curr = validLocations[i];
       
       // Haversine formula for distance calculation
       const R = 6371; // Earth's radius in kilometers
@@ -62,12 +71,12 @@ export default function TripMapScreen({ route }) {
 
   /* Trip statistics */
   const distance = calculateDistance();
-  const points = locations.length;
+  const points = validLocations.length;
 
   /* Fit map to show all coordinates */
   const fitToCoordinates = () => {
-    if (mapRef.current && locations.length > 0) {
-      mapRef.current.fitToCoordinates(locations, {
+    if (mapRef.current && validLocations.length > 0) {
+      mapRef.current.fitToCoordinates(validLocations, {
         edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
         animated: true,
       });
@@ -91,15 +100,18 @@ export default function TripMapScreen({ route }) {
             style={styles.map}
             mapType={mapType}
             initialRegion={{
-              latitude: start.latitude,
-              longitude: start.longitude,
+              latitude: start?.latitude || 0,
+              longitude: start?.longitude || 0,
               latitudeDelta: 0.05,
               longitudeDelta: 0.05,
             }}
             onMapReady={fitToCoordinates}
+            onError={(error) => {
+              console.error('MapView error:', error);
+            }}
           >
             <Polyline
-              coordinates={locations}
+              coordinates={validLocations}
               strokeColor="#3b82f6"
               strokeWidth={5}
               lineCap="round"

@@ -3,12 +3,19 @@ import * as Location from 'expo-location';
 /* Request location permissions from the user */
 export async function requestLocationPermissions() {
   try {
+    /* Check if Location services are available */
+    const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+    
+    if (existingStatus === 'granted') {
+      return true;
+    }
+
     /* Request foreground location permissions */
-    let { status } = await Location.requestForegroundPermissionsAsync();
+    const { status } = await Location.requestForegroundPermissionsAsync();
     
     /* If not granted, throw a descriptive error */
     if (status !== 'granted') {
-      throw new Error('Location permission is required to track your trips');
+      throw new Error('Location permission is required to track your trips. Please enable location access in your device settings.');
     }
     
     /* If granted, return true*/

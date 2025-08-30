@@ -1,8 +1,8 @@
-import MapView, { Polyline, Marker } from 'react-native-maps';
-import React,{ useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
-import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
 import { Ionicons } from '@expo/vector-icons';
+import MapView, { Polyline, Marker } from 'react-native-maps';
+import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
 import api from '../utils/api';
 
 export default function TripTrackingScreen({ token }) {
