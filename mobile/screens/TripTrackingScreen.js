@@ -83,6 +83,7 @@ export default function TripTrackingScreen({ token }) {
   setTripName('');
   setTripId(null);
   setLiveLocations([]);
+  setLocationLogs([]);
   Alert.alert('Trip Ended', 'Your trip has been checked out.');
   };
 
