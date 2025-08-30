@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import api from '../utils/api';
 
@@ -72,7 +73,7 @@ export default function TripHistoryScreen({ token }) {
     >
       <View style={styles.tripHeader}>
         <View style={styles.tripIcon}>
-          <Text style={styles.tripIconText}>🚗</Text>
+          <Ionicons name="map-outline" size={24} color="#3b82f6" />
         </View>
         <View style={styles.tripInfo}>
           <Text style={styles.tripName} numberOfLines={1}>
