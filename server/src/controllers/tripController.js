@@ -104,10 +104,11 @@ export const getTripDetails = async (req, res) => {
       }
 
       // Smoothing: moving average (window size 3)
-      function movingAverage(arr, window=3) {
-        if (arr.length < window) return arr;
-        let smoothed = [];
-        for (let i = 0; i < arr.length; i++) {
+
+      function movingAveragePreserveEnds(arr, window=3) {
+        if (arr.length <= 2) return arr;
+        let smoothed = [arr[0]];
+        for (let i = 1; i < arr.length - 1; i++) {
           let start = Math.max(0, i - Math.floor(window/2));
           let end = Math.min(arr.length, i + Math.ceil(window/2));
           let slice = arr.slice(start, end);
@@ -116,9 +117,10 @@ export const getTripDetails = async (req, res) => {
           let avgTs = slice.reduce((sum, pt) => sum + pt.timestamp, 0) / slice.length;
           smoothed.push({ ...arr[i], latitude: avgLat, longitude: avgLon, timestamp: avgTs });
         }
+        smoothed.push(arr[arr.length - 1]);
         return smoothed;
       }
-      const smoothed = movingAverage(filtered);
+      const smoothed = movingAveragePreserveEnds(filtered);
 
       // Return trip with filtered/smoothed locations
       const tripCleaned = { ...trip.toObject(), locations: smoothed };
