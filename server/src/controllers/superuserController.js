@@ -28,7 +28,7 @@ export const addUser = async (req, res) => {
 
     /* Save user to database */
     await newUser.save();
-
+    
     /* Respond with success and user info */
   handleResponse(res, 201, "User created successfully", { user: newUser });
   } catch (error) {

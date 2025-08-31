@@ -18,18 +18,42 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, ({ data, error }) => {
   // Handle location data
   if (data) {
     const { locations } = data;
-
+    
     // Track last sent location to avoid redundant updates
     if (!TaskManager.lastSent) {
       TaskManager.lastSent = null;
     }
 
-    // For each location, check threshold before sending
+    // For each location, check threshold and filter outliers before sending
     locations.forEach(async (location) => {
-      const { latitude, longitude } = location.coords;
+      const { latitude, longitude, accuracy = 0 } = location.coords;
       const { timestamp } = location;
 
       let shouldSend = false;
+      // Filter: ignore points with low accuracy (> 50 meters)
+      if (accuracy > 50) {
+        console.warn('Ignoring location with low accuracy:', { latitude, longitude, accuracy });
+        return;
+      }
+
+      // Filter: ignore points with large jumps (> 200 meters from last point)
+      if (TaskManager.lastSent) {
+        const toRad = (value) => value * Math.PI / 180;
+        const R = 6371000; // Earth radius in meters
+        const dLat = toRad(latitude - TaskManager.lastSent.latitude);
+        const dLon = toRad(longitude - TaskManager.lastSent.longitude);
+        const lat1 = toRad(TaskManager.lastSent.latitude);
+        const lat2 = toRad(latitude);
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        if (distance > 200) {
+          console.warn('Ignoring location with large jump:', { latitude, longitude, distance });
+          return;
+        }
+      }
+
+      // Threshold logic (same as before)
       if (!TaskManager.lastSent) {
         shouldSend = true;
       } else {
@@ -45,7 +69,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, ({ data, error }) => {
           const tripId = await getTripId();
           const token = await getToken();
           if (tripId && token) {
-            console.log('Sending background location:', { latitude, longitude, timestamp });
+            console.log('Sending background location:', { latitude, longitude, timestamp, accuracy });
             // Send location to backend API
             await api.post(`/trips/${tripId}/locations`, { locations: [{ latitude, longitude, timestamp }] }, {
               headers: { Authorization: `Bearer ${token}` }
