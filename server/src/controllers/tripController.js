@@ -88,9 +88,10 @@ export const getTripDetails = async (req, res) => {
         return !(pt.latitude === prev.latitude && pt.longitude === prev.longitude && pt.timestamp === prev.timestamp);
       });
 
-      // Remove outliers by distance and speed
-      const MAX_JUMP_METERS = 200;
-      const MAX_SPEED_MPS = 30; // ~108 km/h
+
+      // Remove outliers by distance, speed, and preserve sharp turns
+      const MAX_JUMP_METERS = 700;
+      const MAX_SPEED_MPS = 70; // ~250 km/h
       let filtered = [points[0]];
       for (let i = 1; i < points.length; i++) {
         const prev = filtered[filtered.length-1];
@@ -98,18 +99,32 @@ export const getTripDetails = async (req, res) => {
         const dist = haversine(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
         const dt = (curr.timestamp - prev.timestamp) / 1000;
         const speed = dt > 0 ? dist/dt : 0;
-          if (dist < 500 && speed < 55.5) { // Relaxed thresholds: 500m, 200km/h
-            filtered.push(curr);
+        // Preserve sharp turns: if direction changes > 45 degrees, keep point
+        let keep = dist < MAX_JUMP_METERS && speed < MAX_SPEED_MPS;
+        if (i > 1 && keep) {
+          const prev2 = filtered[filtered.length-2];
+          if (prev2) {
+            const dx1 = prev.longitude - prev2.longitude;
+            const dy1 = prev.latitude - prev2.latitude;
+            const dx2 = curr.longitude - prev.longitude;
+            const dy2 = curr.latitude - prev.latitude;
+            const dot = dx1 * dx2 + dy1 * dy2;
+            const mag1 = Math.sqrt(dx1*dx1 + dy1*dy1);
+            const mag2 = Math.sqrt(dx2*dx2 + dy2*dy2);
+            const angle = Math.acos(dot / (mag1 * mag2 + 1e-6)) * 180 / Math.PI;
+            if (angle > 45) keep = true;
           }
+        }
+        if (keep) filtered.push(curr);
       }
 
-        // Fallback: if too few points remain, use only duplicate removal
-        let finalPoints;
-        if (filtered.length < 10) {
-          finalPoints = points;
-        } else {
-          finalPoints = filtered;
-        }
+      // Fallback: if too few points remain, use only duplicate removal
+      let finalPoints;
+      if (filtered.length < 30) {
+        finalPoints = points;
+      } else {
+        finalPoints = filtered;
+      }
 
         // Smoothing: moving average (window size 3)
         function movingAveragePreserveEnds(arr, window=3, rawArr=[]) {
