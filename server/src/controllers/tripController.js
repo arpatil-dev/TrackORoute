@@ -98,29 +98,42 @@ export const getTripDetails = async (req, res) => {
         const dist = haversine(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
         const dt = (curr.timestamp - prev.timestamp) / 1000;
         const speed = dt > 0 ? dist/dt : 0;
-        if (dist < MAX_JUMP_METERS && speed < MAX_SPEED_MPS) {
-          filtered.push(curr);
-        }
+          if (dist < 500 && speed < 55.5) { // Relaxed thresholds: 500m, 200km/h
+            filtered.push(curr);
+          }
       }
 
-      // Smoothing: moving average (window size 3)
-
-      function movingAveragePreserveEnds(arr, window=3) {
-        if (arr.length <= 2) return arr;
-        let smoothed = [arr[0]];
-        for (let i = 1; i < arr.length - 1; i++) {
-          let start = Math.max(0, i - Math.floor(window/2));
-          let end = Math.min(arr.length, i + Math.ceil(window/2));
-          let slice = arr.slice(start, end);
-          let avgLat = slice.reduce((sum, pt) => sum + pt.latitude, 0) / slice.length;
-          let avgLon = slice.reduce((sum, pt) => sum + pt.longitude, 0) / slice.length;
-          let avgTs = slice.reduce((sum, pt) => sum + pt.timestamp, 0) / slice.length;
-          smoothed.push({ ...arr[i], latitude: avgLat, longitude: avgLon, timestamp: avgTs });
+        // Fallback: if too few points remain, use only duplicate removal
+        let finalPoints;
+        if (filtered.length < 10) {
+          finalPoints = points;
+        } else {
+          finalPoints = filtered;
         }
-        smoothed.push(arr[arr.length - 1]);
-        return smoothed;
-      }
-      const smoothed = movingAveragePreserveEnds(filtered);
+
+        // Smoothing: moving average (window size 3)
+        function movingAveragePreserveEnds(arr, window=3, rawArr=[]) {
+          if (arr.length <= 2) return arr;
+          let smoothed = [arr[0]];
+          for (let i = 1; i < arr.length - 1; i++) {
+            let start = Math.max(0, i - Math.floor(window/2));
+            let end = Math.min(arr.length, i + Math.ceil(window/2));
+            let slice = arr.slice(start, end);
+            let avgLat = slice.reduce((sum, pt) => sum + pt.latitude, 0) / slice.length;
+            let avgLon = slice.reduce((sum, pt) => sum + pt.longitude, 0) / slice.length;
+            let avgTs = slice.reduce((sum, pt) => sum + pt.timestamp, 0) / slice.length;
+            smoothed.push({ ...arr[i], latitude: avgLat, longitude: avgLon, timestamp: avgTs });
+          }
+          // Always include the last raw location as endpoint
+          if (rawArr && rawArr.length > 0) {
+            const lastRaw = rawArr[rawArr.length - 1];
+            smoothed.push(lastRaw);
+          } else {
+            smoothed.push(arr[arr.length - 1]);
+          }
+          return smoothed;
+        }
+        const smoothed = movingAveragePreserveEnds(finalPoints, 3, trip.locations);
 
       // Return trip with filtered/smoothed locations
       const tripCleaned = { ...trip.toObject(), locations: smoothed };
