@@ -16,8 +16,8 @@ export default function UserPage() {
   // Filter states
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
-  const [filterMinDistance, setFilterMinDistance] = useState("");
-  const [filterMaxDistance, setFilterMaxDistance] = useState("");
+  const [filterMinDistance, setFilterMinDistance] = useState(0);
+  const [filterMaxDistance, setFilterMaxDistance] = useState(100);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [tripToDelete, setTripToDelete] = useState(null);
@@ -81,8 +81,8 @@ export default function UserPage() {
       if (filterStartDate && date < new Date(filterStartDate)) return false;
       if (filterEndDate && date > new Date(filterEndDate)) return false;
       const dist = getTripDistance(trip);
-      if (filterMinDistance && dist < parseFloat(filterMinDistance)) return false;
-      if (filterMaxDistance && dist > parseFloat(filterMaxDistance)) return false;
+      if (filterMinDistance > 0 && dist < filterMinDistance) return false;
+      if (filterMaxDistance < 100 && dist > filterMaxDistance) return false;
       return true;
     })
     .sort((a, b) => {
@@ -593,9 +593,9 @@ export default function UserPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
                       </svg>
                       Filters
-                      {(filterStartDate || filterEndDate || filterMinDistance || filterMaxDistance) && (
+                      {(filterStartDate || filterEndDate || filterMinDistance > 0 || filterMaxDistance < 100) && (
                         <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-blue-600 rounded-full">
-                          {[filterStartDate, filterEndDate, filterMinDistance, filterMaxDistance].filter(Boolean).length}
+                          {[filterStartDate, filterEndDate, filterMinDistance > 0, filterMaxDistance < 100].filter(Boolean).length}
                         </span>
                       )}
                       <svg className={`w-4 h-4 ml-2 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -605,17 +605,17 @@ export default function UserPage() {
 
                     {/* Dropdown Menu */}
                     {showFilterDropdown && (
-                      <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-99">
+                      <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-slate-200 z-99 max-h-80 overflow-y-auto">
                         <div className="p-4">
-                          <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold text-slate-900">Filter Trips</h4>
-                            {(filterStartDate || filterEndDate || filterMinDistance || filterMaxDistance) && (
+                            {(filterStartDate || filterEndDate || filterMinDistance > 0 || filterMaxDistance < 100) && (
                               <button
                                 onClick={() => {
                                   setFilterStartDate("");
                                   setFilterEndDate("");
-                                  setFilterMinDistance("");
-                                  setFilterMaxDistance("");
+                                  setFilterMinDistance(0);
+                                  setFilterMaxDistance(100);
                                 }}
                                 className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                               >
@@ -624,70 +624,96 @@ export default function UserPage() {
                             )}
                           </div>
                           
-                          {/* Date Range */}
+                          {/* Date Range - Compact */}
                           <div className="mb-4">
                             <label className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <input
                                   type="date"
                                   value={filterStartDate}
                                   onChange={e => setFilterStartDate(e.target.value)}
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                   style={{ colorScheme: 'light' }}
                                 />
-                                <span className="text-xs text-slate-500 mt-1 block">From</span>
+                                <span className="text-xs text-slate-500 mt-0.5 block">From</span>
                               </div>
                               <div>
                                 <input
                                   type="date"
                                   value={filterEndDate}
                                   onChange={e => setFilterEndDate(e.target.value)}
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                   style={{ colorScheme: 'light' }}
                                 />
-                                <span className="text-xs text-slate-500 mt-1 block">To</span>
+                                <span className="text-xs text-slate-500 mt-0.5 block">To</span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Distance Range */}
+                          {/* Distance Range - Compact Single Row */}
                           <div className="mb-4">
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Distance Range (km)</label>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.1"
-                                  value={filterMinDistance}
-                                  onChange={e => setFilterMinDistance(e.target.value)}
-                                  placeholder="Min"
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.1"
-                                  value={filterMaxDistance}
-                                  onChange={e => setFilterMaxDistance(e.target.value)}
-                                  placeholder="Max"
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                />
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="block text-sm font-medium text-slate-700">Distance (km)</label>
+                              <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                                {filterMinDistance} - {filterMaxDistance}km
+                              </span>
+                            </div>
+                            
+                            {/* Compact Dual Slider */}
+                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                              <div className="grid grid-cols-2 gap-3">
+                                {/* Min Slider */}
+                                <div>
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs text-slate-600">Min</span>
+                                    <span className="text-xs font-semibold text-blue-600">{filterMinDistance}</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={filterMinDistance}
+                                    onChange={e => {
+                                      const newMin = parseInt(e.target.value);
+                                      if (newMin <= filterMaxDistance) {
+                                        setFilterMinDistance(newMin);
+                                      }
+                                    }}
+                                    className="w-full h-1.5 bg-slate-300 rounded-lg appearance-none cursor-pointer focus:outline-none"
+                                    style={{
+                                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${filterMinDistance}%, #cbd5e1 ${filterMinDistance}%, #cbd5e1 100%)`
+                                    }}
+                                  />
+                                </div>
+                                
+                                {/* Max Slider */}
+                                <div>
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs text-slate-600">Max</span>
+                                    <span className="text-xs font-semibold text-blue-600">{filterMaxDistance}</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={filterMaxDistance}
+                                    onChange={e => {
+                                      const newMax = parseInt(e.target.value);
+                                      if (newMax >= filterMinDistance) {
+                                        setFilterMaxDistance(newMax);
+                                      }
+                                    }}
+                                    className="w-full h-1.5 bg-slate-300 rounded-lg appearance-none cursor-pointer focus:outline-none"
+                                    style={{
+                                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${filterMaxDistance}%, #cbd5e1 ${filterMaxDistance}%, #cbd5e1 100%)`
+                                    }}
+                                  />
+                                </div>
                               </div>
                             </div>
-                          </div>
-
-                          {/* Apply Button */}
-                          <div className="flex justify-end">
-                            <button
-                              onClick={() => setShowFilterDropdown(false)}
-                              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                              Apply Filters
-                            </button>
                           </div>
                         </div>
                       </div>
