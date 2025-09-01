@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import baseUrl from "../services/baseUrl";
@@ -11,6 +11,9 @@ export default function TripPage() {
   const [trip, setTrip] = useState(null);
   const [message, setMessage] = useState("");
   const [useRawData, setUseRawData] = useState(true); // Default to raw data
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Calculate trip statistics
   const calculateTripStats = () => {
@@ -55,20 +58,51 @@ export default function TripPage() {
     };
   };
 
+  // Function to fetch trip data
+  const fetchTrip = useCallback(async () => {
+    try {
+      const endpoint = useRawData ? `${baseUrl}/api/trips/${id}/raw` : `${baseUrl}/api/trips/${id}`;
+      const res = await axios.get(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTrip(res.data.data);
+    } catch (err) {
+      setMessage("Error fetching trip"+err);
+    }
+  }, [id, token, useRawData]);
+
+  // Handle auto-refresh toggle
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh);
+  };
+
+  // Initial fetch and setup auto-refresh
   useEffect(() => {
-    async function fetchTrip() {
-      try {
-        const endpoint = useRawData ? `${baseUrl}/api/trips/${id}/raw` : `${baseUrl}/api/trips/${id}`;
-        const res = await axios.get(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setTrip(res.data.data);
-      } catch (err) {
-        setMessage("Error fetching trip"+err);
+    fetchTrip();
+  }, [fetchTrip]);
+
+  // Auto-refresh interval effect
+  useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(fetchTrip, 5000); // Refresh every 5 seconds
+      setRefreshInterval(interval);
+      return () => clearInterval(interval);
+    } else {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        setRefreshInterval(null);
       }
     }
-    fetchTrip();
-  }, [id, token, useRawData]);
+  }, [autoRefresh, fetchTrip, refreshInterval]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [refreshInterval]);
 
   if (!trip) {
     return (
@@ -89,9 +123,9 @@ export default function TripPage() {
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6 gap-4">
+          <div className="flex items-center justify-between py-4 sm:py-6">
             {/* Breadcrumb Navigation */}
-            <div className="flex items-center space-x-4 order-1 sm:order-none">
+            <div className="flex items-center space-x-4">
               <button 
                 onClick={() => navigate(-1)}
                 className="inline-flex items-center px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
@@ -110,31 +144,97 @@ export default function TripPage() {
             </div>
             
             {/* Page Title */}
-            <div className="text-center sm:flex-1 order-2 sm:order-none">
+            <div className="text-center flex-1">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Trip Analysis</h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">View comprehensive trip information</p>
             </div>
             
-            {/* Data Toggle */}
-            <div className="flex items-center space-x-3 order-3 sm:order-none w-32 sm:w-36">
-              <span className="text-sm text-slate-600 font-medium whitespace-nowrap">Data:</span>
-              <div className="relative">
-                <button
-                  onClick={() => setUseRawData(!useRawData)}
-                  className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                    useRawData ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ${
-                      useRawData ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              <span className={`text-sm font-medium w-16 ${useRawData ? 'text-blue-600' : 'text-slate-600'}`}>
-                {useRawData ? 'Raw' : 'Processed'}
-              </span>
+            {/* Settings Button */}
+            <div className="relative">
+              <button
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className="inline-flex items-center px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+
+              {/* Settings Modal */}
+              {isSettingsOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-[9998]" 
+                    onClick={() => setIsSettingsOpen(false)}
+                  ></div>
+                  <div className="absolute right-full top-0 mr-2 w-72 bg-white rounded-lg shadow-xl border border-slate-200 z-[9999]">
+                    <div className="p-3">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-3">Settings</h3>
+                      
+                      {/* Data Toggle */}
+                      <div className="flex items-center justify-between py-2 px-2 hover:bg-slate-50 rounded-md transition-colors duration-200">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-slate-900">Data Type</h4>
+                        </div>
+                        <div className="flex items-center space-x-2 text-xs">
+                          <span className={`font-medium ${!useRawData ? 'text-blue-600' : 'text-slate-400'}`}>
+                            Processed
+                          </span>
+                          <button
+                            onClick={() => setUseRawData(!useRawData)}
+                            className={`relative inline-flex items-center h-5 rounded-full w-9 transition-colors duration-200 focus:outline-none ${
+                              useRawData ? 'bg-blue-600' : 'bg-slate-300'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block w-3 h-3 transform bg-white rounded-full transition-transform duration-200 ${
+                                useRawData ? 'translate-x-5' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                          <span className={`font-medium ${useRawData ? 'text-blue-600' : 'text-slate-400'}`}>
+                            Raw
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="border-t border-slate-100 my-2"></div>
+
+                      {/* Auto Refresh Toggle */}
+                      <div className="flex items-center justify-between py-2 px-2 hover:bg-slate-50 rounded-md transition-colors duration-200">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-slate-900">Auto Refresh</h4>
+                        </div>
+                        <div className="flex items-center space-x-2 text-xs">
+                          <span className={`font-medium ${!autoRefresh ? 'text-slate-600' : 'text-slate-400'}`}>
+                            OFF
+                          </span>
+                          <button
+                            onClick={toggleAutoRefresh}
+                            className={`relative inline-flex items-center h-5 rounded-full w-9 transition-colors duration-200 focus:outline-none ${
+                              autoRefresh ? 'bg-green-600' : 'bg-slate-300'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block w-3 h-3 transform bg-white rounded-full transition-transform duration-200 ${
+                                autoRefresh ? 'translate-x-5' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                          <span className={`font-medium flex items-center space-x-1 ${autoRefresh ? 'text-green-600' : 'text-slate-400'}`}>
+                            <span>ON</span>
+                            {autoRefresh && (
+                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
