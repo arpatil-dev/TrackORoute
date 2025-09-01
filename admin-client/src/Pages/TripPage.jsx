@@ -10,6 +10,7 @@ export default function TripPage() {
   const token = localStorage.getItem("token");
   const [trip, setTrip] = useState(null);
   const [message, setMessage] = useState("");
+  const [useRawData, setUseRawData] = useState(true); // Default to raw data
 
   // Calculate trip statistics
   const calculateTripStats = () => {
@@ -57,7 +58,8 @@ export default function TripPage() {
   useEffect(() => {
     async function fetchTrip() {
       try {
-        const res = await axios.get(`${baseUrl}/api/trips/${id}`, {
+        const endpoint = useRawData ? `${baseUrl}/api/trips/${id}/raw` : `${baseUrl}/api/trips/${id}`;
+        const res = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setTrip(res.data.data);
@@ -66,7 +68,7 @@ export default function TripPage() {
       }
     }
     fetchTrip();
-  }, [id, token]);
+  }, [id, token, useRawData]);
 
   if (!trip) {
     return (
@@ -113,7 +115,27 @@ export default function TripPage() {
               <p className="text-xs sm:text-sm text-slate-600 mt-1">View comprehensive trip information</p>
             </div>
             
-            <div className="hidden sm:block sm:w-32"></div> {/* Spacer for centering on larger screens */}
+            {/* Data Toggle */}
+            <div className="flex items-center space-x-3 order-3 sm:order-none w-32 sm:w-36">
+              <span className="text-sm text-slate-600 font-medium whitespace-nowrap">Data:</span>
+              <div className="relative">
+                <button
+                  onClick={() => setUseRawData(!useRawData)}
+                  className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    useRawData ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ${
+                      useRawData ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <span className={`text-sm font-medium w-16 ${useRawData ? 'text-blue-600' : 'text-slate-600'}`}>
+                {useRawData ? 'Raw' : 'Processed'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
