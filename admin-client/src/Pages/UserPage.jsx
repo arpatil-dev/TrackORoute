@@ -12,6 +12,16 @@ export default function UserPage() {
   const [formData, setFormData] = useState({});
   const [message, setMessage] = useState("");
   const [trips, setTrips] = useState([]);
+
+  // Filter states
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
+  const [filterMinDistance, setFilterMinDistance] = useState("");
+  const [filterMaxDistance, setFilterMaxDistance] = useState("");
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState(null);
+
   // Fetch user's trips
   useEffect(() => {
     async function fetchTrips() {
@@ -19,7 +29,6 @@ export default function UserPage() {
         const res = await axios.get(`${baseUrl}/api/trips?userId=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log(res.data.data.trips);
         setTrips(res.data.data.trips || []);
       } catch (err) {
         console.error(err);
@@ -27,6 +36,69 @@ export default function UserPage() {
     }
     fetchTrips();
   }, [id, token]);
+
+  // Helper: Calculate trip distance (km)
+  function getTripDistance(trip) {
+    if (!trip.locations || trip.locations.length < 2) return 0;
+    let total = 0;
+    for (let i = 1; i < trip.locations.length; i++) {
+      const prev = trip.locations[i - 1];
+      const curr = trip.locations[i];
+      const R = 6371;
+      const dLat = (curr.latitude - prev.latitude) * Math.PI / 180;
+      const dLon = (curr.longitude - prev.longitude) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(prev.latitude * Math.PI / 180) * Math.cos(curr.latitude * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      total += R * c;
+    }
+    return total;
+  }
+
+  // Helper: Get trip date
+  function getTripDate(trip) {
+    if (!trip.locations || trip.locations.length === 0) return null;
+    return new Date(trip.locations[0].timestamp);
+  }
+
+  // Helper: Group trips by date label
+  function getDateLabel(date) {
+    const today = new Date();
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diff = (t - d) / (1000 * 60 * 60 * 24);
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Yesterday";
+    return date.toLocaleDateString();
+  }
+
+  // Filter and sort trips
+  const filteredTrips = trips
+    .filter(trip => {
+      const date = getTripDate(trip);
+      if (!date) return false;
+      if (filterStartDate && date < new Date(filterStartDate)) return false;
+      if (filterEndDate && date > new Date(filterEndDate)) return false;
+      const dist = getTripDistance(trip);
+      if (filterMinDistance && dist < parseFloat(filterMinDistance)) return false;
+      if (filterMaxDistance && dist > parseFloat(filterMaxDistance)) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const da = getTripDate(a);
+      const db = getTripDate(b);
+      return db - da;
+    });
+
+  // Group trips by date label
+  const groupedTrips = {};
+  filteredTrips.forEach(trip => {
+    const date = getTripDate(trip);
+    const label = getDateLabel(date);
+    if (!groupedTrips[label]) groupedTrips[label] = [];
+    groupedTrips[label].push(trip);
+  });
 
   useEffect(() => {
     async function fetchUser() {
@@ -86,15 +158,28 @@ export default function UserPage() {
   };
 
   const handleDeleteTrip = async (tripId) => {
-    // if (!window.confirm("Delete this trip?")) return;
+    setTripToDelete(tripId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTrip = async () => {
     try {
-      await axios.delete(`${baseUrl}/api/trips/${tripId}`, {
+      await axios.delete(`${baseUrl}/api/trips/${tripToDelete}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTrips((trips) => trips.filter((t) => t._id !== tripId));
+      setTrips((trips) => trips.filter((t) => t._id !== tripToDelete));
+      setShowDeleteConfirm(false);
+      setTripToDelete(null);
     } catch (err) {
       alert("Error deleting trip: " + err.message);
+      setShowDeleteConfirm(false);
+      setTripToDelete(null);
     }
+  };
+
+  const cancelDeleteTrip = () => {
+    setShowDeleteConfirm(false);
+    setTripToDelete(null);
   };
 
   if (!user) {
@@ -489,134 +574,174 @@ export default function UserPage() {
           {/* Trip History - Right Side */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-              {/* Trip History Header */}
-              <div className="px-6 py-6 border-b border-slate-200 bg-slate-50">
+
+              {/* Trip History Header & Filters */}
+              <div className="px-6 py-6 border-b border-slate-200 bg-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900">
-                      Trip History
-                    </h3>
-                    <p className="text-sm text-slate-600 mt-1">
-                      {trips.length} trips recorded
-                    </p>
+                    <h3 className="text-xl font-bold text-slate-900">Trip History</h3>
+                    <p className="text-sm text-slate-600 mt-1">{filteredTrips.length} trips found</p>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <svg
-                      className="h-5 w-5 text-slate-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  
+                  {/* Filter Button & Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                      className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                      />
-                    </svg>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
+                      </svg>
+                      Filters
+                      {(filterStartDate || filterEndDate || filterMinDistance || filterMaxDistance) && (
+                        <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-blue-600 rounded-full">
+                          {[filterStartDate, filterEndDate, filterMinDistance, filterMaxDistance].filter(Boolean).length}
+                        </span>
+                      )}
+                      <svg className={`w-4 h-4 ml-2 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {showFilterDropdown && (
+                      <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-99">
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-sm font-semibold text-slate-900">Filter Trips</h4>
+                            {(filterStartDate || filterEndDate || filterMinDistance || filterMaxDistance) && (
+                              <button
+                                onClick={() => {
+                                  setFilterStartDate("");
+                                  setFilterEndDate("");
+                                  setFilterMinDistance("");
+                                  setFilterMaxDistance("");
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                Clear all
+                              </button>
+                            )}
+                          </div>
+                          
+                          {/* Date Range */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <input
+                                  type="date"
+                                  value={filterStartDate}
+                                  onChange={e => setFilterStartDate(e.target.value)}
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  style={{ colorScheme: 'light' }}
+                                />
+                                <span className="text-xs text-slate-500 mt-1 block">From</span>
+                              </div>
+                              <div>
+                                <input
+                                  type="date"
+                                  value={filterEndDate}
+                                  onChange={e => setFilterEndDate(e.target.value)}
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  style={{ colorScheme: 'light' }}
+                                />
+                                <span className="text-xs text-slate-500 mt-1 block">To</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Distance Range */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Distance Range (km)</label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.1"
+                                  value={filterMinDistance}
+                                  onChange={e => setFilterMinDistance(e.target.value)}
+                                  placeholder="Min"
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.1"
+                                  value={filterMaxDistance}
+                                  onChange={e => setFilterMaxDistance(e.target.value)}
+                                  placeholder="Max"
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Apply Button */}
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => setShowFilterDropdown(false)}
+                              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              Apply Filters
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Trip List */}
-              <div className="max-h-96 overflow-y-auto">
-                {trips.length === 0 ? (
+              {/* Trip List with Grouping */}
+              <div className="h-96 overflow-y-auto">
+                {filteredTrips.length === 0 ? (
                   <div className="text-center py-12">
-                    <svg
-                      className="mx-auto h-12 w-12 text-slate-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                      />
+                    <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
-                    <h3 className="mt-2 text-sm font-medium text-slate-900">
-                      No trips yet
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                      This user hasn't recorded any trips.
-                    </p>
+                    <h3 className="mt-2 text-sm font-medium text-slate-900">No trips found</h3>
+                    <p className="mt-1 text-sm text-slate-500">No trips match the selected filters.</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-200">
-                    {trips.map((trip) => (
-                      <div
-                        key={trip._id}
-                        className="block hover:bg-slate-50 transition-colors duration-200"
-                      >
-                        <div className="px-6 py-4 flex items-center justify-between">
-                          <Link
-                            to={`/trip/${trip._id}`}
-                            className="flex-1 flex items-center space-x-4"
-                          >
-                            <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <svg
-                                className="h-5 w-5 text-blue-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                              </svg>
+                  <div>
+                    {Object.entries(groupedTrips).map(([label, trips]) => (
+                      <div key={label}>
+                        <div className="bg-slate-100 px-6 py-2 text-xs font-semibold text-slate-600 sticky top-0 z-10">{label}</div>
+                        <div className="divide-y divide-slate-200">
+                          {trips.map(trip => (
+                            <div key={trip._id} className="block hover:bg-slate-50 transition-colors duration-200">
+                              <div className="px-6 py-4 flex items-center justify-between">
+                                <Link to={`/trip/${trip._id}`} className="flex-1 flex items-center space-x-4">
+                                  <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900">{trip.tripName || `Trip ${trip._id.slice(-6)}`}</p>
+                                    <p className="text-sm text-slate-500">
+                                      {getTripDate(trip)?.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                    </p>
+                                    <p className="text-xs text-slate-400">{getTripDistance(trip).toFixed(2)} km &bull; {trip.locations ? trip.locations.length : 0} points</p>
+                                  </div>
+                                </Link>
+                                <button 
+                                  onClick={() => handleDeleteTrip(trip._id)} 
+                                  className="ml-4 inline-flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition-all duration-200 group" 
+                                  title="Delete trip"
+                                >
+                                  <svg className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">
-                                {trip.tripName || `Trip ${trip._id.slice(-6)}`}
-                              </p>
-                              <p className="text-sm text-slate-500">
-                                {trip.locations && trip.locations.length > 0
-                                  ? new Date(
-                                      trip.locations[0].timestamp
-                                    ).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })
-                                  : "No date available"}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {trip.locations ? trip.locations.length : 0} location
-                                points
-                              </p>
-                            </div>
-                          </Link>
-                          <button
-                            onClick={() => handleDeleteTrip(trip._id)}
-                            className="ml-4 p-2 rounded-full hover:bg-red-100"
-                            title="Delete trip"
-                          >
-                            <svg
-                              className="h-5 w-5 text-red-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
+                          ))}
                         </div>
                       </div>
                     ))}
@@ -627,6 +752,48 @@ export default function UserPage() {
           </div>
         </div>
       </div>
+
+      {/* Custom Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 transform transition-all">
+            <div className="px-5 py-5">
+              {/* Icon */}
+              <div className="flex justify-center mb-3">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+              </div>
+              
+              {/* Title */}
+              <h3 className="text-lg font-bold text-slate-900 text-center mb-2">Delete Trip</h3>
+              
+              {/* Message */}
+              <p className="text-slate-600 text-center mb-5 text-sm">
+                Are you sure you want to delete this trip? This action cannot be undone.
+              </p>
+              
+              {/* Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={cancelDeleteTrip}
+                  className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteTrip}
+                  className="flex-1 px-3 py-2.5 bg-red-600 border border-red-600 rounded-lg text-sm font-medium text-white hover:bg-red-700 hover:border-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
