@@ -37,7 +37,7 @@ export default function UserPage() {
         setUser(res.data.data);
         setFormData(res.data.data);
       } catch (err) {
-        setMessage("Error fetching user"+err);
+        setMessage("Error fetching user" + err);
       }
     }
     fetchUser();
@@ -54,17 +54,21 @@ export default function UserPage() {
       Object.entries(formData).forEach(([key, value]) => {
         data.append(key, value);
       });
-      const res = await axios.put(`${baseUrl}/api/superuser/users/${id}`, data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await axios.put(
+        `${baseUrl}/api/superuser/users/${id}`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       setUser(res.data.data);
       setEditMode(false);
       setMessage("User updated successfully");
     } catch (err) {
-      setMessage("Error updating user"+err);
+      setMessage("Error updating user" + err);
     }
   };
 
@@ -77,13 +81,21 @@ export default function UserPage() {
       setMessage("User deleted successfully");
       setTimeout(() => navigate("/"), 1000);
     } catch (err) {
-      setMessage("Error deleting user"+err);
+      setMessage("Error deleting user" + err);
     }
   };
 
-
-
-
+  const handleDeleteTrip = async (tripId) => {
+    // if (!window.confirm("Delete this trip?")) return;
+    try {
+      await axios.delete(`${baseUrl}/api/trips/${tripId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTrips((trips) => trips.filter((t) => t._id !== tripId));
+    } catch (err) {
+      alert("Error deleting trip: " + err.message);
+    }
+  };
 
   if (!user) {
     return (
@@ -104,30 +116,54 @@ export default function UserPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6 gap-4">
             {/* Breadcrumb Navigation */}
             <div className="flex items-center space-x-4 order-1 sm:order-none">
-              <button 
+              <button
                 onClick={() => navigate("/")}
                 className="inline-flex items-center px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
                 <span className="hidden sm:inline">Back to Dashboard</span>
                 <span className="sm:hidden">Back</span>
               </button>
               <div className="hidden sm:flex items-center text-slate-500">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
                 <span className="text-sm font-medium">User Profile</span>
               </div>
             </div>
-            
+
             {/* Page Title */}
             <div className="text-center sm:flex-1 order-2 sm:order-none">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">User Management</h1>
-              <p className="text-xs sm:text-sm text-slate-600 mt-1">View and manage user details</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+                User Management
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                View and manage user details
+              </p>
             </div>
-            
+
             <div className="hidden sm:block sm:w-32"></div> {/* Spacer for centering on larger screens */}
           </div>
         </div>
@@ -136,36 +172,56 @@ export default function UserPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          
           {/* User Profile Card - Left Side */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
               {/* Profile Header */}
               <div className="px-6 py-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-center">
                 <div className="relative">
-                  <img 
-                    src={user.photo || '/default-avatar.png'} 
-                    alt={user.firstName} 
-                    className="w-24 h-24 rounded-full mx-auto mb-4 object-cover ring-4 ring-white shadow-lg" 
+                  <img
+                    src={user.photo || "/default-avatar.png"}
+                    alt={user.firstName}
+                    className="w-24 h-24 rounded-full mx-auto mb-4 object-cover ring-4 ring-white shadow-lg"
                   />
                   {!editMode && (
                     <div className="absolute top-0 right-0 bg-green-500 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
                   )}
                 </div>
-                <h2 className="text-2xl font-bold mb-2">{user.firstName} {user.lastName}</h2>
-                <p className="text-blue-100 text-sm">Member since {new Date(user.createdAt || Date.now()).toLocaleDateString()}</p>
+                <h2 className="text-2xl font-bold mb-2">
+                  {user.firstName} {user.lastName}
+                </h2>
+                <p className="text-blue-100 text-sm">
+                  Member since{" "}
+                  {new Date(user.createdAt || Date.now()).toLocaleDateString()}
+                </p>
               </div>
 
               {/* Success/Error Message */}
               {message && (
                 <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
                   <div className="flex items-center">
-                    <svg className="h-5 w-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    <svg
+                      className="h-5 w-5 text-blue-500 mr-2"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <p className="text-blue-700 text-sm font-medium">{message}</p>
                   </div>
@@ -177,53 +233,118 @@ export default function UserPage() {
                 {!editMode ? (
                   <div className="space-y-4">
                     <div className="flex items-center">
-                      <svg className="w-5 h-5 text-slate-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                      <svg
+                        className="w-5 h-5 text-slate-400 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
+                        />
                       </svg>
                       <div>
-                        <p className="text-sm font-medium text-slate-900">{user.email}</p>
-                        <p className="text-xs text-slate-500">Email Address</p>
+                        <p className="text-sm font-medium text-slate-900">
+                          {user.email}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Email Address
+                        </p>
                       </div>
                     </div>
 
                     <div className="flex items-center">
-                      <svg className="w-5 h-5 text-slate-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      <svg
+                        className="w-5 h-5 text-slate-400 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                        />
                       </svg>
                       <div>
-                        <p className="text-sm font-medium text-slate-900">{user.phone}</p>
-                        <p className="text-xs text-slate-500">Phone Number</p>
+                        <p className="text-sm font-medium text-slate-900">
+                          {user.phone}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Phone Number
+                        </p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <svg className="w-5 h-5 text-slate-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <svg
+                        className="w-5 h-5 text-slate-400 mr-3 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
                       </svg>
                       <div>
-                        <p className="text-sm font-medium text-slate-900">{user.address}</p>
+                        <p className="text-sm font-medium text-slate-900">
+                          {user.address}
+                        </p>
                         <p className="text-xs text-slate-500">Address</p>
                       </div>
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex space-x-3 pt-4">
-                      <button 
-                        className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200" 
+                      <button
+                        className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
                         onClick={() => setEditMode(true)}
                       >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
                         </svg>
                         Edit
                       </button>
-                      <button 
-                        className="inline-flex items-center justify-center px-4 py-2 border border-red-300 text-sm font-medium rounded-xl text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200" 
+                      <button
+                        className="inline-flex items-center justify-center px-4 py-2 border border-red-300 text-sm font-medium rounded-xl text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
                         onClick={handleDelete}
                       >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                         Delete
                       </button>
@@ -232,100 +353,128 @@ export default function UserPage() {
                 ) : (
                   <form onSubmit={handleEdit} className="space-y-4">
                     <div className="text-center mb-6">
-                      <h3 className="text-lg font-semibold text-slate-900">Edit User Details</h3>
-                      <p className="text-sm text-slate-600">Update user information</p>
+                      <h3 className="text-lg font-semibold text-slate-900">
+                        Edit User Details
+                      </h3>
+                      <p className="text-sm text-slate-600">
+                        Update user information
+                      </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
-                        <input 
-                          type="text" 
-                          name="firstName" 
-                          value={formData.firstName || ""} 
-                          onChange={handleChange} 
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm" 
-                          placeholder="First Name" 
-                          required 
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          First Name
+                        </label>
+                        <input
+                          type="text"
+                          name="firstName"
+                          value={formData.firstName || ""}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                          placeholder="First Name"
+                          required
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
-                        <input 
-                          type="text" 
-                          name="lastName" 
-                          value={formData.lastName || ""} 
-                          onChange={handleChange} 
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm" 
-                          placeholder="Last Name" 
-                          required 
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Last Name
+                        </label>
+                        <input
+                          type="text"
+                          name="lastName"
+                          value={formData.lastName || ""}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                          placeholder="Last Name"
+                          required
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                      <input 
-                        type="email" 
-                        name="email" 
-                        value={formData.email || ""} 
-                        onChange={handleChange} 
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm" 
-                        placeholder="Email" 
-                        required 
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email || ""}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                        placeholder="Email"
+                        required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                      <input 
-                        type="text" 
-                        name="phone" 
-                        value={formData.phone || ""} 
-                        onChange={handleChange} 
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm" 
-                        placeholder="Phone" 
-                        required 
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Phone
+                      </label>
+                      <input
+                        type="text"
+                        name="phone"
+                        value={formData.phone || ""}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                        placeholder="Phone"
+                        required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
-                      <input 
-                        type="text" 
-                        name="address" 
-                        value={formData.address || ""} 
-                        onChange={handleChange} 
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm" 
-                        placeholder="Address" 
-                        required 
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Address
+                      </label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address || ""}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                        placeholder="Address"
+                        required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Photo</label>
-                      <input 
-                        type="file" 
-                        name="photo" 
-                        accept="image/*" 
-                        onChange={e => setFormData({ ...formData, photo: e.target.files[0] })} 
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Photo
+                      </label>
+                      <input
+                        type="file"
+                        name="photo"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setFormData({ ...formData, photo: e.target.files[0] })
+                        }
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                       />
                     </div>
 
                     <div className="flex space-x-3 pt-2">
-                      <button 
-                        type="submit" 
+                      <button
+                        type="submit"
                         className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
                       >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
                         </svg>
                         Save
                       </button>
-                      <button 
-                        type="button" 
-                        className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-xl text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200" 
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-xl text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200"
                         onClick={() => setEditMode(false)}
                       >
                         Cancel
@@ -344,12 +493,26 @@ export default function UserPage() {
               <div className="px-6 py-6 border-b border-slate-200 bg-slate-50">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900">Trip History</h3>
-                    <p className="text-sm text-slate-600 mt-1">{trips.length} trips recorded</p>
+                    <h3 className="text-xl font-bold text-slate-900">
+                      Trip History
+                    </h3>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {trips.length} trips recorded
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    <svg
+                      className="h-5 w-5 text-slate-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -359,58 +522,103 @@ export default function UserPage() {
               <div className="max-h-96 overflow-y-auto">
                 {trips.length === 0 ? (
                   <div className="text-center py-12">
-                    <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    <svg
+                      className="mx-auto h-12 w-12 text-slate-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                      />
                     </svg>
-                    <h3 className="mt-2 text-sm font-medium text-slate-900">No trips yet</h3>
-                    <p className="mt-1 text-sm text-slate-500">This user hasn't recorded any trips.</p>
+                    <h3 className="mt-2 text-sm font-medium text-slate-900">
+                      No trips yet
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      This user hasn't recorded any trips.
+                    </p>
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-200">
-                    {trips.map(trip => (
-                      <Link 
-                        to={`/trip/${trip._id}`} 
-                        key={trip._id} 
+                    {trips.map((trip) => (
+                      <div
+                        key={trip._id}
                         className="block hover:bg-slate-50 transition-colors duration-200"
                       >
-                        <div className="px-6 py-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900">
-                                  {trip.tripName || `Trip ${trip._id.slice(-6)}`}
-                                </p>
-                                <p className="text-sm text-slate-500">
-                                  {trip.locations && trip.locations.length > 0 
-                                    ? new Date(trip.locations[0].timestamp).toLocaleDateString('en-US', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })
-                                    : 'No date available'
-                                  }
-                                </p>
-                                <p className="text-xs text-slate-400">
-                                  {trip.locations ? trip.locations.length : 0} location points
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        <div className="px-6 py-4 flex items-center justify-between">
+                          <Link
+                            to={`/trip/${trip._id}`}
+                            className="flex-1 flex items-center space-x-4"
+                          >
+                            <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <svg
+                                className="h-5 w-5 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
                               </svg>
                             </div>
-                          </div>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">
+                                {trip.tripName || `Trip ${trip._id.slice(-6)}`}
+                              </p>
+                              <p className="text-sm text-slate-500">
+                                {trip.locations && trip.locations.length > 0
+                                  ? new Date(
+                                      trip.locations[0].timestamp
+                                    ).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
+                                  : "No date available"}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {trip.locations ? trip.locations.length : 0} location
+                                points
+                              </p>
+                            </div>
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteTrip(trip._id)}
+                            className="ml-4 p-2 rounded-full hover:bg-red-100"
+                            title="Delete trip"
+                          >
+                            <svg
+                              className="h-5 w-5 text-red-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
                         </div>
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 )}
