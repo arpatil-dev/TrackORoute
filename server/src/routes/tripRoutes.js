@@ -8,6 +8,7 @@ import {
   stopTrip,
   getTrips,
   getTripDetails,
+  getRawTripDetails,
   deleteTrip
 } from "../controllers/tripController.js";
 
@@ -22,6 +23,7 @@ router.post("/:tripId/stop", authenticate, requireRole("user"), stopTrip);
 // Trip history and details (accessible by both user and superuser)
 router.get("/", authenticate, getTrips);
 router.get("/:tripId", authenticate, getTripDetails);
+router.get("/:tripId/raw", authenticate, getRawTripDetails);
 router.delete('/:tripId', authenticate, requireRole('superuser'), deleteTrip);
 
 export default router;
