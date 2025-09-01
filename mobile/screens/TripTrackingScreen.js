@@ -1,14 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { Platform } from 'react-native';
-import { useEffect } from 'react';
-import { AppState } from 'react-native';
-import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { Platform, AppState, View, Text, Button, Switch, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, Dimensions, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
-import { requestBackgroundLocationPermissions, startBackgroundLocationUpdates, stopBackgroundLocationUpdates } from '../utils/backgroundLocation';
+import { requestBackgroundLocationPermissions, startBackgroundLocationUpdates ,stopBackgroundLocationUpdates} from '../utils/backgroundLocation';
 import api from '../utils/api';
-import { storeTripId } from '../utils/storage';
+import { storeTripId, insertLocation, getUnsentLocations, markLocationsAsSent, initDB, clearLocations, setTrackingMode } from '../utils/storage';
 
 export default function TripTrackingScreen({ token }) {
   // Track app state for foreground/background transitions
@@ -30,6 +27,7 @@ export default function TripTrackingScreen({ token }) {
     });
     return () => subscription.remove();
   }, [tracking, tripId, token]);
+  
   /* State for trip tracking */
   const [tracking, setTracking] = useState(false);
 
@@ -53,6 +51,21 @@ export default function TripTrackingScreen({ token }) {
     setModalVisible(true);
   };
 
+  // State to manage tracking mode: 'live', 'batch', or 'sendOnCheckout'
+  const [trackingMode, setTrackingMode] = useState('live');
+
+  // Toggle for tracking mode (cycles through three modes)
+  const toggleTrackingMode = () => {
+    setTrackingMode(
+      trackingMode === 'live' ? 'batch' : trackingMode === 'batch' ? 'sendOnCheckout' : 'live'
+    );
+    setTrackingMode(prev => {
+      if (prev === 'live') return 'batch';
+      if (prev === 'batch') return 'sendOnCheckout';
+      return 'live';
+    });
+  };
+
   /* Start trip with given name */
   const startTripWithName = async () => {
     if (!inputTripName.trim()) {
@@ -66,11 +79,9 @@ export default function TripTrackingScreen({ token }) {
     try {
       // Platform-specific location permission and tracking logic
       if (Platform.OS === 'android') {
-        // Android: request both foreground and background permissions, start both services
         await requestLocationPermissions();
         await requestBackgroundLocationPermissions();
       } else {
-        // iOS: only request foreground permission
         await requestLocationPermissions();
       }
 
@@ -82,24 +93,73 @@ export default function TripTrackingScreen({ token }) {
       // Trip started successfully, save tripId
       setTripId(res.data.data.tripId);
       storeTripId(res.data.data.tripId);
-      // Start foreground location updates
-      locationSubscription.current = await startLocationUpdates(async (location) => {
-        try {
-          await api.post(`/trips/${res.data.data.tripId}/locations`, { locations: [location] }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setLocationLogs((prev) => [
-            { ...location, sent: true },
-            ...prev
-          ]);
-          setLiveLocations((prev) => [...prev, { latitude: location.latitude, longitude: location.longitude }]);
-        } catch (err) {
-          setLocationLogs((prev) => [
-            { ...location, sent: false, error: err.message },
-            ...prev
-          ]);
-        }
-      });
+
+      // Start tracking based on selected mode
+      if (trackingMode === 'batch') {
+        console.log('Batch mode selected');
+        locationSubscription.current = await startLocationUpdates(async (location) => {
+          try {
+            await insertLocation(location.latitude, location.longitude, location.timestamp);
+            setLocationLogs((prev) => [
+              { ...location, sent: false },
+              ...prev
+            ]);
+            setLiveLocations((prev) => [...prev, { latitude: location.latitude, longitude: location.longitude }]);
+            // Batch upload logic as before
+            const batch = await getUnsentLocations(10);
+            if (batch && batch.length === 10) {
+              try {
+                await api.post(`/trips/${res.data.data.tripId}/locations/batch`, { locations: batch }, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                await markLocationsAsSent(batch.map(loc => loc.id));
+                setLocationLogs((prev) => prev.map(log => batch.find(b => b.id === log.id) ? { ...log, sent: true } : log));
+                console.log('Batch sent and marked as sent');
+              } catch (err) {
+                setLocationLogs((prev) => prev.map(log => batch.find(b => b.id === log.id) ? { ...log, error: err.message } : log));
+              }
+            }
+          } catch (err) {
+            console.error('Error in batch mode callback:', err);
+          }
+        });
+      } else if (trackingMode === 'sendOnCheckout') {
+        // Save all points locally, send only on checkout
+        locationSubscription.current = await startLocationUpdates(async (location) => {
+          try {
+            await insertLocation(location.latitude, location.longitude, location.timestamp);
+            setLocationLogs((prev) => [
+              { ...location, sent: false },
+              ...prev
+            ]);
+            setLiveLocations((prev) => [...prev, { latitude: location.latitude, longitude: location.longitude }]);
+          } catch (err) {
+            setLocationLogs((prev) => [
+              { ...location, sent: false, error: err.message },
+              ...prev
+            ]);
+          }
+        });
+      } else {
+        console.log('Live mode selected');
+        locationSubscription.current = await startLocationUpdates(async (location) => {
+          try {
+            await api.post(`/trips/${res.data.data.tripId}/locations`, { locations: [location] }, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            setLocationLogs((prev) => [
+              { ...location, sent: true },
+              ...prev
+            ]);
+            setLiveLocations((prev) => [...prev, { latitude: location.latitude, longitude: location.longitude }]);
+          } catch (err) {
+            setLocationLogs((prev) => [
+              { ...location, sent: false, error: err.message },
+              ...prev
+            ]);
+          }
+        });
+      }
 
       // Only start background location updates on Android
       if (Platform.OS === 'android') {
@@ -129,6 +189,27 @@ export default function TripTrackingScreen({ token }) {
         await stopBackgroundLocationUpdates();
       }
 
+      // Flush any remaining batch in batch mode or sendOnCheckout mode
+      if ((trackingMode === 'batch' || trackingMode === 'sendOnCheckout') && tripId) {
+        // For batch mode, flush any remaining batch
+        let batch = await getUnsentLocations(10);
+        while (batch.length > 0) {
+          try {
+            await api.post(`/trips/${tripId}/locations/batch`, { locations: batch }, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            await markLocationsAsSent(batch.map(loc => loc.id));
+            setLocationLogs((prev) => prev.map(log => batch.find(b => b.id === log.id) ? { ...log, sent: true } : log));
+          } catch (err) {
+            setLocationLogs((prev) => prev.map(log => batch.find(b => b.id === log.id) ? { ...log, error: err.message } : log));
+          }
+          batch = await getUnsentLocations(10);
+        }
+      }
+
+      // Clear local SQLite points after checkout
+      await clearLocations();
+
       if (tripId) {
         try {
           await api.post(`/trips/${tripId}/stop`, {}, {
@@ -154,6 +235,11 @@ export default function TripTrackingScreen({ token }) {
       setCheckingOut(false);
     }
   };
+
+  // Initialize SQLite DB on mount
+  useEffect(() => {
+    initDB();
+  }, []);
 
   return (
     <>
@@ -266,7 +352,43 @@ export default function TripTrackingScreen({ token }) {
 
           {/* Location Logs Section */}
           <View style={styles.logsSection}>
-            <Text style={styles.logsTitle}>Location Logs</Text>
+            <View style={styles.logsHeaderRow}>
+              <Text style={styles.logsTitle}>Location Logs</Text>
+            </View>
+            {/* Segmented control for tracking mode */}
+            <View style={styles.segmentedControlContainer}>
+              <TouchableOpacity
+                style={[styles.segmentButton, trackingMode === 'live' && styles.segmentButtonActive]}
+                onPress={() => setTrackingMode('live')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="flash" size={18} color={trackingMode === 'live' ? '#fff' : '#3b82f6'} style={styles.segmentIcon} />
+                <Text style={[styles.segmentLabel, trackingMode === 'live' && styles.segmentLabelActive]}>Live</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.segmentButton, trackingMode === 'batch' && styles.segmentButtonActive]}
+                onPress={() => setTrackingMode('batch')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="layers" size={18} color={trackingMode === 'batch' ? '#fff' : '#3b82f6'} style={styles.segmentIcon} />
+                <Text style={[styles.segmentLabel, trackingMode === 'batch' && styles.segmentLabelActive]}>Batch</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.segmentButton, trackingMode === 'sendOnCheckout' && styles.segmentButtonActive]}
+                onPress={() => setTrackingMode('sendOnCheckout')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="cloud-upload" size={18} color={trackingMode === 'sendOnCheckout' ? '#fff' : '#ea580c'} style={styles.segmentIcon} />
+                <Text style={[styles.segmentLabel, trackingMode === 'sendOnCheckout' && styles.segmentLabelActive]}>Checkout</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modeText}>
+              Current Mode: {
+                trackingMode === 'live' ? 'Live (send as you go)' :
+                trackingMode === 'batch' ? 'Batch (store & send in chunks)' :
+                'Checkout (save locally, send all at end)'
+              }
+            </Text>
             <View style={styles.logsContainer}>
               {locationLogs.length === 0 ? (
                 <View style={styles.noLogsContainer}>
@@ -497,9 +619,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#1e293b',
-    marginBottom: 16,
+    marginBottom: 0,
   },
   logsContainer: {
+    marginTop: 16,
     backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
@@ -660,5 +783,59 @@ const styles = StyleSheet.create({
   },
   modalButtonSpinner: {
     marginRight: 8,
+  },
+  logsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  segmentedControlContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e2e8f0',
+    borderRadius: 24,
+    padding: 4,
+    marginVertical: 8,
+    justifyContent: 'center',
+  },
+  segmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginHorizontal: 4,
+    borderRadius: 20,
+    backgroundColor: '#e2e8f0',
+    borderWidth: 0,
+    elevation: 0,
+    transition: 'background-color 0.2s',
+  },
+  segmentButtonActive: {
+    backgroundColor: '#3b82f6',
+    elevation: 2,
+  },
+  segmentIcon: {
+    marginRight: 6,
+  },
+  segmentLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  segmentLabelActive: {
+    color: '#fff',
+  },
+  activeLabel: {
+    color: '#3b82f6',
+    fontWeight: '700',
+  },
+  inactiveLabel: {
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  modeIcon: {
+    marginRight: 4,
   },
 });

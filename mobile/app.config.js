@@ -8,7 +8,6 @@ export default {
     orientation: "portrait",
     icon: "./assets/icon-1.png",
     userInterfaceStyle: "light",
-    newArchEnabled: true,
     description: "Professional GPS tracking and route management app for drivers and travelers",
     primaryColor: "#3b82f6",
 
@@ -45,11 +44,13 @@ export default {
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
+      jsEngine: "jsc",
       config: {
         googleMaps: {
           apiKey: process.env.GOOGLE_MAPS_API_KEY
         }
-      }
+      },
+       // Disable Hermes for expo-sqlite compatibility
     },
 
     web: {
@@ -62,8 +63,9 @@ export default {
         {
           locationAlwaysAndWhenInUsePermission: "Allow TrackORoute to access your location to track your trips and provide accurate route information.",
           isBackgroundLocationEnabled: true
-        }
-      ]
+        },
+      ],
+      "expo-sqlite"
     ],
 
     extra: {

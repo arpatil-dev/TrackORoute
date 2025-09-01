@@ -1,4 +1,70 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SQLite from "expo-sqlite";
+
+// --- SQLite Setup & Batch Location Helpers (Async API) ---
+
+let db;
+
+// Initialize DB and tables
+export const initDB = async () => {
+  if (!db) {
+    db = await SQLite.openDatabaseAsync("trackoroute.db");
+  }
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS locations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      latitude REAL,
+      longitude REAL,
+      timestamp INTEGER,
+      sent INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS batches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at INTEGER
+    );
+  `);
+};
+
+// Insert a location point
+export const insertLocation = async (latitude, longitude, timestamp) => {
+  await db.runAsync(
+    "INSERT INTO locations (latitude, longitude, timestamp, sent) VALUES (?, ?, ?, 0);",
+    [latitude, longitude, timestamp]
+  );
+};
+
+// Get unsent location points (for batching)
+export const getUnsentLocations = async (limit = 10) => {
+  const rows = await db.getAllAsync(
+    "SELECT * FROM locations WHERE sent = 0 ORDER BY timestamp ASC LIMIT ?;",
+    [limit]
+  );
+  return rows || [];
+};
+
+// Mark locations as sent after successful upload
+export const markLocationsAsSent = async (ids = []) => {
+  if (ids.length === 0) return;
+  await db.runAsync(
+    `UPDATE locations SET sent = 1 WHERE id IN (${ids.map(() => "?").join(",")});`,
+    ids
+  );
+};
+
+// Utility: Clear all locations (for testing/debug)
+export const clearLocations = async () => {
+  await db.execAsync("DELETE FROM locations;");
+};
+
+
+// Usage:
+// 1. Call initDB() once on app start
+// 2. Use insertLocation() to save points
+// 3. Use getUnsentLocations() to fetch batch for upload
+// 4. Use markLocationsAsSent() after successful upload
+
 /* AsyncStorage is used for persistent key-value storage */
 /* Token storage functions */
 export const storeToken = async (token) => {
@@ -101,3 +167,11 @@ export const clearAllStorage = async () => {
     console.error('Error clearing storage', e);
   }
 };
+
+export async function setTrackingMode(mode) {
+  await AsyncStorage.setItem('trackingMode', mode);
+}
+
+export async function getTrackingMode() {
+  return await AsyncStorage.getItem('trackingMode');
+}
