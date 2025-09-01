@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import baseUrl from "../services/baseUrl";
@@ -12,7 +12,7 @@ export default function TripPage() {
   const [message, setMessage] = useState("");
   const [useRawData, setUseRawData] = useState(true); // Default to raw data
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(null);
+  const refreshIntervalRef = useRef(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Calculate trip statistics
@@ -84,25 +84,30 @@ export default function TripPage() {
   // Auto-refresh interval effect
   useEffect(() => {
     if (autoRefresh) {
+      console.log("Setting up auto-refresh interval");
       const interval = setInterval(fetchTrip, 5000); // Refresh every 5 seconds
-      setRefreshInterval(interval);
-      return () => clearInterval(interval);
+      refreshIntervalRef.current = interval;
+      return () => {
+        console.log("Cleaning up auto-refresh interval");
+        clearInterval(interval);
+      };
     } else {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-        setRefreshInterval(null);
+      if (refreshIntervalRef.current) {
+        console.log("Clearing auto-refresh interval");
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
       }
     }
-  }, [autoRefresh, fetchTrip, refreshInterval]);
+  }, [autoRefresh, fetchTrip]);
 
   // Cleanup interval on unmount
   useEffect(() => {
     return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
       }
     };
-  }, [refreshInterval]);
+  }, []);
 
   if (!trip) {
     return (
