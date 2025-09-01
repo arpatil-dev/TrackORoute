@@ -28,6 +28,24 @@ export const addLocations = async (req, res) => {
   }
 };
 
+// Add batch location points to a trip
+export const addLocationsBatch = async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { locations } = req.body;
+    if (!Array.isArray(locations) || locations.length === 0) {
+      return handleResponse(res, 400, "No locations provided", null);
+    }
+    const trip = await Trip.findById(tripId);
+    if (!trip) return handleResponse(res, 404, "Trip not found", null);
+    trip.locations.push(...locations);
+    await trip.save();
+    handleResponse(res, 200, "Batch locations added", null);
+  } catch (error) {
+    handleResponse(res, 500, "Server error", null);
+  }
+};
+
 // Stop a trip
 export const stopTrip = async (req, res) => {
   try {
@@ -153,6 +171,18 @@ export const getTripDetails = async (req, res) => {
       // Return trip with filtered/smoothed locations
       const tripCleaned = { ...trip.toObject(), locations: smoothed };
       handleResponse(res, 200, "Trip details fetched", { trip: tripCleaned });
+  } catch (error) {
+    handleResponse(res, 500, "Server error", null);
+  }
+};
+
+// Delete a trip (superuser only)
+export const deleteTrip = async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const trip = await Trip.findByIdAndDelete(tripId);
+    if (!trip) return handleResponse(res, 404, "Trip not found", null);
+    handleResponse(res, 200, "Trip deleted", null);
   } catch (error) {
     handleResponse(res, 500, "Server error", null);
   }
