@@ -176,6 +176,24 @@ export const getTripDetails = async (req, res) => {
   }
 };
 
+// Get raw trip details (no post-processing)
+export const getRawTripDetails = async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const trip = await Trip.findById(tripId);
+    if (!trip) return handleResponse(res, 404, "Trip not found", null);
+    // Only superuser or owner can view
+    if (req.user.role !== "superuser" && String(trip.user) !== String(req.user._id)) {
+      return handleResponse(res, 403, "Forbidden", null);
+    }
+    
+    // Return raw trip data without any processing
+    handleResponse(res, 200, "Raw trip details fetched", { trip: trip.toObject() });
+  } catch (error) {
+    handleResponse(res, 500, "Server error", null);
+  }
+};
+
 // Delete a trip (superuser only)
 export const deleteTrip = async (req, res) => {
   try {
