@@ -84,6 +84,7 @@ export const deleteUser = async (req, res) => {
   }
 };
 
+// Get current superuser info
 export const getCurrentSuperuser = async (req, res) => {
   try {
 		const user = req.user;
