@@ -6,6 +6,7 @@ yarn-error.log*
 # Expo
 .expo/
 .expo-shared/
+mobile/android
 mobile/app.json   # ignore only real app.json, keep app.config.js
 mobile/.env
 mobile/.env.*
