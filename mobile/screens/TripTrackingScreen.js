@@ -279,57 +279,112 @@ export default function TripTrackingScreen({ token }) {
             </Text>
           </View>
 
-          {/* Action Buttons */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={[
-                styles.actionButton, 
-                styles.checkInButton, 
-                (tracking || checkingIn) && styles.disabledButton
-              ]} 
-              onPress={handleCheckIn} 
-              disabled={tracking || checkingIn}
-              activeOpacity={0.8}
-            >
-              <View style={styles.buttonContent}>
-                {checkingIn ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Ionicons name="log-in-outline" size={20} color="#ffffff" />
-                )}
-                <Text style={[
-                  styles.actionButtonText, 
-                  (!tracking || checkingOut) && styles.disabledButtonText
-                ]}>
-                  {checkingIn ? 'Checking In...' : 'Check In'}
-                </Text>
-              </View>
-            </TouchableOpacity>
+          {/* Tracking Mode Selection */}
+          <View style={styles.modeSelectionSection}>
+            <View style={styles.modeGrid}>
+              <TouchableOpacity
+                style={[styles.modeCard, trackingMode === 'live' && styles.modeCardActive]}
+                onPress={() => handleModeChange('live')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.modeCardBackground, trackingMode === 'live' && styles.modeCardActiveBackground]} />
+                <Ionicons name="flash" size={22} color={trackingMode === 'live' ? '#fff' : '#3b82f6'} />
+                <Text style={[styles.modeLabel, trackingMode === 'live' && styles.modeLabelActive]}>Live</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeCard, trackingMode === 'batch' && styles.modeCardActive]}
+                onPress={() => handleModeChange('batch')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.modeCardBackground, trackingMode === 'batch' && styles.modeCardActiveBackground]} />
+                <Ionicons name="layers" size={22} color={trackingMode === 'batch' ? '#fff' : '#3b82f6'} />
+                <Text style={[styles.modeLabel, trackingMode === 'batch' && styles.modeLabelActive]}>Batch</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeCard, trackingMode === 'sendOnCheckout' && styles.modeCardActive]}
+                onPress={() => handleModeChange('sendOnCheckout')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.modeCardBackground, trackingMode === 'sendOnCheckout' && styles.modeCardActiveBackground]} />
+                <Ionicons name="cloud-upload" size={22} color={trackingMode === 'sendOnCheckout' ? '#fff' : '#ea580c'} />
+                <Text style={[styles.modeLabel, trackingMode === 'sendOnCheckout' && styles.modeLabelActive]}>Upload</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeCard, trackingMode === 'robustBatch' && styles.modeCardActive]}
+                onPress={() => handleModeChange('robustBatch')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.modeCardBackground, trackingMode === 'robustBatch' && styles.modeCardActiveBackground]} />
+                <Ionicons name="reload" size={22} color={trackingMode === 'robustBatch' ? '#fff' : '#0ea5e9'} />
+                <Text style={[styles.modeLabel, trackingMode === 'robustBatch' && styles.modeLabelActive]}>Robust</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-            <TouchableOpacity 
-              style={[
-                styles.actionButton, 
-                styles.checkOutButton, 
-                (!tracking || checkingOut) && styles.disabledButton
-              ]} 
-              onPress={handleCheckOut} 
-              disabled={!tracking || checkingOut}
-              activeOpacity={0.8}
-            >
-              <View style={styles.buttonContent}>
-                {checkingOut ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Ionicons name="log-out-outline" size={20} color="#ffffff" />
-                )}
-                <Text style={[
-                  styles.actionButtonText, 
-                  (!tracking || checkingOut) && styles.disabledButtonText
-                ]}>
-                  {checkingOut ? 'Checking Out...' : 'Check Out'}
-                </Text>
-              </View>
-            </TouchableOpacity>
+          {/* Action Button and Mode Description Row */}
+          <View style={styles.actionRow}>
+            <View style={styles.buttonSection}>
+              {!tracking ? (
+                <TouchableOpacity 
+                  style={[
+                    styles.actionButton, 
+                    styles.checkInButton,
+                    checkingIn && styles.disabledButton
+                  ]} 
+                  onPress={handleCheckIn} 
+                  disabled={checkingIn}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.buttonContent}>
+                    {checkingIn ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Ionicons name="log-in-outline" size={20} color="#ffffff" />
+                    )}
+                    <Text style={[
+                      styles.actionButtonText, 
+                      checkingIn && styles.disabledButtonText
+                    ]}>
+                      {checkingIn ? 'Checking In...' : 'Check In'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={[
+                    styles.actionButton, 
+                    styles.checkOutButton,
+                    checkingOut && styles.disabledButton
+                  ]} 
+                  onPress={handleCheckOut} 
+                  disabled={checkingOut}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.buttonContent}>
+                    {checkingOut ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Ionicons name="log-out-outline" size={20} color="#ffffff" />
+                    )}
+                    <Text style={[
+                      styles.actionButtonText, 
+                      checkingOut && styles.disabledButtonText
+                    ]}>
+                      {checkingOut ? 'Checking Out...' : 'Check Out'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.descriptionSection}>
+              <Text style={styles.modeDescription}>
+                {trackingMode === 'live' ? 'Send location data instantly after capture (Best for live Tracking)' :
+                 trackingMode === 'batch' ? 'Store locally, send in batches of 10 points (Best for less frequent updates)' :
+                 trackingMode === 'sendOnCheckout' ? 'Save locally, send all captured points on Checkout (Best for no network scenarios)' :
+                 'Store locally, uses batches and retry on network failure (Best for reliability)'}
+              </Text>
+            </View>
           </View>
 
           {/* Map Section */}
@@ -377,49 +432,6 @@ export default function TripTrackingScreen({ token }) {
             <View style={styles.logsHeaderRow}>
               <Text style={styles.logsTitle}>Location Logs</Text>
             </View>
-            {/* Segmented control for tracking mode */}
-            <View style={styles.segmentedControlContainer}>
-              <TouchableOpacity
-                style={[styles.segmentButton, trackingMode === 'live' && styles.segmentButtonActive]}
-                onPress={() => handleModeChange('live')}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="flash" size={18} color={trackingMode === 'live' ? '#fff' : '#3b82f6'} style={styles.segmentIcon} />
-                <Text style={[styles.segmentLabel, trackingMode === 'live' && styles.segmentLabelActive]}>Live</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.segmentButton, trackingMode === 'batch' && styles.segmentButtonActive]}
-                onPress={() => handleModeChange('batch')}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="layers" size={18} color={trackingMode === 'batch' ? '#fff' : '#3b82f6'} style={styles.segmentIcon} />
-                <Text style={[styles.segmentLabel, trackingMode === 'batch' && styles.segmentLabelActive]}>Batch</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.segmentButton, trackingMode === 'sendOnCheckout' && styles.segmentButtonActive]}
-                onPress={() => handleModeChange('sendOnCheckout')}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="cloud-upload" size={18} color={trackingMode === 'sendOnCheckout' ? '#fff' : '#ea580c'} style={styles.segmentIcon} />
-                <Text style={[styles.segmentLabel, trackingMode === 'sendOnCheckout' && styles.segmentLabelActive]}>Checkout</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.segmentButton, trackingMode === 'robustBatch' && styles.segmentButtonActive]}
-                onPress={() => handleModeChange('robustBatch')}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="reload" size={18} color={trackingMode === 'robustBatch' ? '#fff' : '#0ea5e9'} style={styles.segmentIcon} />
-                <Text style={[styles.segmentLabel, trackingMode === 'robustBatch' && styles.segmentLabelActive]}>Robust Batch</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modeText}>
-              Current Mode: {
-                trackingMode === 'live' ? 'Live (send as you go)' :
-                trackingMode === 'batch' ? 'Batch (store & send in chunks)' :
-                trackingMode === 'sendOnCheckout' ? 'Checkout (save locally, send all at end)' :
-                'Robust Batch (store, send in batches, retry on failure)'
-              }
-            </Text>
             <View style={styles.logsContainer}>
               {locationLogs.length === 0 ? (
                 <View style={styles.noLogsContainer}>
@@ -556,15 +568,120 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Mode Selection Styles
+  modeSelectionSection: {
+    marginBottom: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  modeGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 6,
+  },
+  modeCard: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+    marginBottom: 6,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    minHeight: 80,
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  modeCardActive: {
+    backgroundColor: 'transparent',
+    borderColor: '#3b82f6',
+    shadowColor: '#3b82f6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modeCardBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 14,
+    backgroundColor: '#f8fafc',
+  },
+  modeCardActiveBackground: {
+    backgroundColor: '#3b82f6',
+  },
+  modeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+    marginTop: 6,
+    textAlign: 'center',
+    lineHeight: 12,
+    letterSpacing: -0.2,
+    zIndex: 1,
+  },
+  modeLabelActive: {
+    color: '#ffffff',
+  },
+modeDescription: {
+  fontSize: 14,
+  color: '#475569',
+  textAlign: 'left', // 👈 center text inside
+  fontStyle: 'normal',
+  fontWeight: '500',
+  
+  margin: 0,
+  padding: 0,
+  // remove flex: 1
+},
+
+  // Action Row Styles
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    gap: 16,
+    minHeight: 56,
+  },
+  buttonSection: {
+    flex: 0,
+  },
+ descriptionSection: {
+  flex: 1,
+  paddingLeft: 8,
+  justifyContent: 'center',
+  alignItems: 'center',
+  height: 56,  
+},
+
   // Button Styles
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: 24,
-    gap: 12,
+    paddingHorizontal: 20,
   },
   actionButton: {
-    flex: 1,
+    width: 140,
     height: 56,
     borderRadius: 16,
     justifyContent: 'center',
@@ -820,53 +937,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
-  },
-  segmentedControlContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e2e8f0',
-    borderRadius: 24,
-    padding: 4,
-    marginVertical: 8,
-    justifyContent: 'center',
-  },
-  segmentButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    marginHorizontal: 4,
-    borderRadius: 20,
-    backgroundColor: '#e2e8f0',
-    borderWidth: 0,
-    elevation: 0,
-    transition: 'background-color 0.2s',
-  },
-  segmentButtonActive: {
-    backgroundColor: '#3b82f6',
-    elevation: 2,
-  },
-  segmentIcon: {
-    marginRight: 6,
-  },
-  segmentLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  segmentLabelActive: {
-    color: '#fff',
-  },
-  activeLabel: {
-    color: '#3b82f6',
-    fontWeight: '700',
-  },
-  inactiveLabel: {
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  modeIcon: {
-    marginRight: 4,
   },
 });
