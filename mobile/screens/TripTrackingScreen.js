@@ -5,7 +5,7 @@ import MapView, { Polyline, Marker } from 'react-native-maps';
 import { requestLocationPermissions, startLocationUpdates, stopLocationUpdates } from '../utils/location';
 import { requestBackgroundLocationPermissions, startBackgroundLocationUpdates ,stopBackgroundLocationUpdates} from '../utils/backgroundLocation';
 import api from '../utils/api';
-import { storeTripId, insertLocation, getUnsentLocations, markLocationsAsSent, initDB, clearLocations, setTrackingMode } from '../utils/storage';
+import { storeTripId, insertLocation, getUnsentLocations, markLocationsAsSent, initDB, clearLocations, setTrackingMode, getTrackingMode } from '../utils/storage';
 
 export default function TripTrackingScreen({ token }) {
   // Track app state for foreground/background transitions
@@ -51,19 +51,21 @@ export default function TripTrackingScreen({ token }) {
     setModalVisible(true);
   };
 
-  // State to manage tracking mode: 'live', 'batch', or 'sendOnCheckout'
-  const [trackingMode, setTrackingMode] = useState('live');
+  // State to manage tracking mode: 'live', 'batch', 'sendOnCheckout', 'robustBatch'
+  const [trackingMode, setTrackingModeState] = useState('live');
 
-  // Toggle for tracking mode (cycles through three modes)
-  const toggleTrackingMode = () => {
-    setTrackingMode(
-      trackingMode === 'live' ? 'batch' : trackingMode === 'batch' ? 'sendOnCheckout' : 'live'
-    );
-    setTrackingMode(prev => {
-      if (prev === 'live') return 'batch';
-      if (prev === 'batch') return 'sendOnCheckout';
-      return 'live';
-    });
+  // On mount, load tracking mode from AsyncStorage
+  useEffect(() => {
+    (async () => {
+      const mode = await getTrackingMode();
+      setTrackingModeState(mode);
+    })();
+  }, []);
+
+  // When user selects a mode, update both local state and AsyncStorage
+  const handleModeChange = async (mode) => {
+    setTrackingModeState(mode);
+    await setTrackingMode(mode);
   };
 
   /* Start trip with given name */
@@ -123,6 +125,25 @@ export default function TripTrackingScreen({ token }) {
             console.error('Error in batch mode callback:', err);
           }
         });
+      } else if (trackingMode === 'robustBatch') {
+        // Robust batch mode: only collect points locally, sending/retry handled in backgroundLocation.js
+        console.log('Robust Batch mode selected');
+        locationSubscription.current = await startLocationUpdates(async (location) => {
+          try {
+            await insertLocation(location.latitude, location.longitude, location.timestamp);
+            setLocationLogs((prev) => [
+              { ...location, sent: false },
+              ...prev
+            ]);
+            setLiveLocations((prev) => [...prev, { latitude: location.latitude, longitude: location.longitude }]);
+            // No batch sending here; handled by backgroundLocation.js robustBatchSendLoop
+          } catch (err) {
+            setLocationLogs((prev) => [
+              { ...location, sent: false, error: err.message },
+              ...prev
+            ]);
+          }
+        });
       } else if (trackingMode === 'sendOnCheckout') {
         // Save all points locally, send only on checkout
         locationSubscription.current = await startLocationUpdates(async (location) => {
@@ -164,6 +185,7 @@ export default function TripTrackingScreen({ token }) {
       // Only start background location updates on Android
       if (Platform.OS === 'android') {
         await startBackgroundLocationUpdates();
+        console.log('Background location updates started on Android');
       }
 
       setTracking(true);
@@ -359,7 +381,7 @@ export default function TripTrackingScreen({ token }) {
             <View style={styles.segmentedControlContainer}>
               <TouchableOpacity
                 style={[styles.segmentButton, trackingMode === 'live' && styles.segmentButtonActive]}
-                onPress={() => setTrackingMode('live')}
+                onPress={() => handleModeChange('live')}
                 activeOpacity={0.85}
               >
                 <Ionicons name="flash" size={18} color={trackingMode === 'live' ? '#fff' : '#3b82f6'} style={styles.segmentIcon} />
@@ -367,7 +389,7 @@ export default function TripTrackingScreen({ token }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.segmentButton, trackingMode === 'batch' && styles.segmentButtonActive]}
-                onPress={() => setTrackingMode('batch')}
+                onPress={() => handleModeChange('batch')}
                 activeOpacity={0.85}
               >
                 <Ionicons name="layers" size={18} color={trackingMode === 'batch' ? '#fff' : '#3b82f6'} style={styles.segmentIcon} />
@@ -375,18 +397,27 @@ export default function TripTrackingScreen({ token }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.segmentButton, trackingMode === 'sendOnCheckout' && styles.segmentButtonActive]}
-                onPress={() => setTrackingMode('sendOnCheckout')}
+                onPress={() => handleModeChange('sendOnCheckout')}
                 activeOpacity={0.85}
               >
                 <Ionicons name="cloud-upload" size={18} color={trackingMode === 'sendOnCheckout' ? '#fff' : '#ea580c'} style={styles.segmentIcon} />
                 <Text style={[styles.segmentLabel, trackingMode === 'sendOnCheckout' && styles.segmentLabelActive]}>Checkout</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.segmentButton, trackingMode === 'robustBatch' && styles.segmentButtonActive]}
+                onPress={() => handleModeChange('robustBatch')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="reload" size={18} color={trackingMode === 'robustBatch' ? '#fff' : '#0ea5e9'} style={styles.segmentIcon} />
+                <Text style={[styles.segmentLabel, trackingMode === 'robustBatch' && styles.segmentLabelActive]}>Robust Batch</Text>
               </TouchableOpacity>
             </View>
             <Text style={styles.modeText}>
               Current Mode: {
                 trackingMode === 'live' ? 'Live (send as you go)' :
                 trackingMode === 'batch' ? 'Batch (store & send in chunks)' :
-                'Checkout (save locally, send all at end)'
+                trackingMode === 'sendOnCheckout' ? 'Checkout (save locally, send all at end)' :
+                'Robust Batch (store, send in batches, retry on failure)'
               }
             </Text>
             <View style={styles.logsContainer}>

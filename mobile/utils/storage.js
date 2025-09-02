@@ -1,3 +1,34 @@
+// Allowed tracking modes
+const allowedTrackingModes = ['live', 'batch', 'sendOnCheckout', 'robustBatch'];
+
+// Store the current tracking mode in AsyncStorage
+export async function setTrackingMode(mode) {
+  if (!allowedTrackingModes.includes(mode)) {
+    console.warn('Unknown tracking mode:', mode);
+    return;
+  }
+  try {
+    console.log('Setting tracking mode to:', mode);
+    await AsyncStorage.setItem('trackingMode', mode);
+
+  } catch (e) {
+    console.error('Error setting tracking mode', e);
+  }
+}
+
+// Retrieve the current tracking mode from AsyncStorage
+export async function getTrackingMode() {
+  try {
+    const mode = await AsyncStorage.getItem('trackingMode');
+    if (allowedTrackingModes.includes(mode)) {
+      return mode;
+    }
+    return 'live';
+  } catch (e) {
+    console.error('Error getting tracking mode', e);
+    return 'live';
+  }
+}
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SQLite from "expo-sqlite";
 
@@ -168,10 +199,10 @@ export const clearAllStorage = async () => {
   }
 };
 
-export async function setTrackingMode(mode) {
-  await AsyncStorage.setItem('trackingMode', mode);
-}
+// export async function setTrackingMode(mode) {
+//   await AsyncStorage.setItem('trackingMode', mode);
+// }
 
-export async function getTrackingMode() {
-  return await AsyncStorage.getItem('trackingMode');
-}
+// export async function getTrackingMode() {
+//   return await AsyncStorage.getItem('trackingMode');
+// }

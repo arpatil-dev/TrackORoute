@@ -76,11 +76,14 @@ export default function UserPage() {
   // Filter and sort trips
   const filteredTrips = trips
     .filter(trip => {
+      // Always show trips with empty locations (distance = 0)
+      if (trip.locations && trip.locations.length === 0) return true;
       const date = getTripDate(trip);
       if (!date) return false;
       if (filterStartDate && date < new Date(filterStartDate)) return false;
       if (filterEndDate && date > new Date(filterEndDate)) return false;
       const dist = getTripDistance(trip);
+      console.log('Trip distance:', dist);
       if (filterMinDistance > 0 && dist < filterMinDistance) return false;
       if (filterMaxDistance < 100 && dist > filterMaxDistance) return false;
       return true;
@@ -95,7 +98,7 @@ export default function UserPage() {
   const groupedTrips = {};
   filteredTrips.forEach(trip => {
     const date = getTripDate(trip);
-    const label = getDateLabel(date);
+    const label = date ? getDateLabel(date) : "No Date";
     if (!groupedTrips[label]) groupedTrips[label] = [];
     groupedTrips[label].push(trip);
   });

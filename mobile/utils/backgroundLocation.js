@@ -17,6 +17,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (data) {
     const { locations } = data;
     const mode = await getTrackingMode();
+    console.log('Tracking mode:', mode);
     locations.forEach(async (location) => {
       const { latitude, longitude, accuracy = 0 } = location.coords;
       const { timestamp } = location;
@@ -65,7 +66,77 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
       } else if (mode === 'sendOnCheckout') {
         await insertLocation(latitude, longitude, timestamp);
         // Do not send until checkout
+      } else if (mode === 'robustBatch') {
+        // Robust batch mode: always collect, queue, and retry all unsent batches for every new point
+        console.log(`Robust batch mode: storing location ${latitude}, ${longitude} at ${new Date(timestamp).toISOString()}`);
+        await insertLocation(latitude, longitude, timestamp);
+        console.log('Inserted location into DB for robust batch mode');
+        // For every new point, try to send all unsent batches
+        const tripId = await getTripId();
+        const token = await getToken();
+        if (tripId && token) {
+          console.log('Attempting to send all unsent batches in robust batch mode');
+          let batch = await getUnsentLocations(10);
+          console.log('Unsent locations fetched for robust batch mode:', batch.length);
+          while (batch && batch.length === 10) {
+            console.log('Sending locations to server');
+            try {
+              await api.post(`/trips/${tripId}/locations/batch`, { locations: batch }, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              console.log('Robust batch sent successfully to server');
+              await markLocationsAsSent(batch.map(loc => loc.id));
+              console.log('marked locations as sent\n');
+            } catch (err) {
+              console.error('Robust batch send failed, will retry on next point:', err);
+              break; // Stop retrying for now, will retry on next location
+            }
+            batch = await getUnsentLocations(10);
+          }
+        }
       }
+// Robust batch send loop: always try to send oldest unsent batch, retry on failure, keep collecting
+async function robustBatchSendLoop() {
+  const RETRY_DELAY = 10000; // ms
+  let keepTrying = true;
+  while (keepTrying) {
+    // Get oldest unsent batch of 10
+    console.log('Getting 10 unsent locations for robust batch send');
+    const batch = await getUnsentLocations(10);
+    console.log('\n10 Unsent locations :', batch.length,'\n');
+    if (!batch || batch.length === 0) {
+      // No unsent points, stop loop
+      keepTrying = false;
+      break;
+    }
+    // Only send full batches (or send partial if you want)
+    if (batch.length < 10) {
+      // Wait for more points
+      keepTrying = false;
+      break;
+    }
+    const tripId = await getTripId();
+    const token = await getToken();
+    if (!tripId || !token) {
+      keepTrying = false;
+      break;
+    }
+    try {
+      console.log('Sending robust batch of locations:');
+      await api.post(`/trips/${tripId}/locations/batch`, { locations: batch }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('Robust batch sent successfully to server');
+      await markLocationsAsSent(batch.map(loc => loc.id));
+      // Continue to next batch immediately
+    } catch (err) {
+      // Network/server error: wait and retry
+      console.error('Robust batch send failed, will retry:', err);
+      await new Promise(res => setTimeout(res, RETRY_DELAY));
+      console.log('Retrying robust batch send...');
+    }
+  }
+}
     });
   }
 });
@@ -92,7 +163,7 @@ export async function requestBackgroundLocationPermissions() {
 export async function startBackgroundLocationUpdates() {
   return await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
     accuracy: Location.Accuracy.BestForNavigation,
-    timeInterval: 10000,
+    timeInterval: 5000,
     distanceInterval: 2,
     showsBackgroundLocationIndicator: true,
     foregroundService: {

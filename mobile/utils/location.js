@@ -37,7 +37,7 @@ export async function getCurrentLocation() {
   Throttles updates to avoid excessive calls 
   Only calls callback if location changes significantly 
   Returns the subscription object to allow stopping updates */
-export async function startLocationUpdates(callback, interval = 10000, distance = 2) {
+export async function startLocationUpdates(callback, interval = 5000, distance = 2) {
   let lastSent = null;
   /* Start watching position with given accuracy, time interval, and distance interval */
   return Location.watchPositionAsync(
