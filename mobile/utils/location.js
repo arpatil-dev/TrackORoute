@@ -37,12 +37,12 @@ export async function getCurrentLocation() {
   Throttles updates to avoid excessive calls 
   Only calls callback if location changes significantly 
   Returns the subscription object to allow stopping updates */
-export async function startLocationUpdates(callback, interval = 10000, distance = 5) {
+export async function startLocationUpdates(callback, interval = 3000, distance = 1) {
   let lastSent = null;
   /* Start watching position with given accuracy, time interval, and distance interval */
   return Location.watchPositionAsync(
     {
-      accuracy: Location.Accuracy.High,
+      accuracy: Location.Accuracy.BestForNavigation,
       timeInterval: interval,
       distanceInterval: distance,
     },
@@ -51,7 +51,7 @@ export async function startLocationUpdates(callback, interval = 10000, distance 
       const { latitude, longitude } = location.coords;
       const { timestamp } = location;
       
-      if (!lastSent || Math.abs(latitude - lastSent.latitude) > 0.00005 || Math.abs(longitude - lastSent.longitude) > 0.00005) {
+      if (!lastSent || Math.abs(latitude - lastSent.latitude) > 0.00001 || Math.abs(longitude - lastSent.longitude) > 0.00001) {
         callback({ latitude, longitude, timestamp });
         lastSent = { latitude, longitude };
       }

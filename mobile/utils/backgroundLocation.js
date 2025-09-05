@@ -24,7 +24,9 @@ const backgroundLiveModeLocationHandler = async (
   shouldSend = false
 ) => {
   try {
+    
     if (shouldSend) {
+      if(await getForegroundServiceEnabled()) return;
       await api.post(
         `/trips/${tripId}/locations`,
         { locations: [{ latitude, longitude, timestamp }] },
@@ -47,6 +49,7 @@ const backgroundBatchModeLocationHandler = async (
   token = null
 ) => {
   try {
+    if(await getForegroundServiceEnabled()) return;
     logger.background("2. Saving location to local DB");
 
     const token = await getToken();
@@ -64,6 +67,7 @@ const backgroundBatchModeLocationHandler = async (
       logger.background(
         `6. Sending batch of ${batch.length} locations to server`
       );
+      if(await getForegroundServiceEnabled()) return;
       await api.post(
         `/trips/${tripId}/locations/batch`,
         { locations: batch },
@@ -86,6 +90,7 @@ const backgroundSendOnCheckoutModeLocationHandler = async (
   timestamp
 ) => {
   try {
+    // if(await getForegroundServiceEnabled()) return;
     await insertLocation(latitude, longitude, timestamp);
   } catch (error) {
     console.error("Error in background send-on-checkout mode handler:", error);
@@ -100,6 +105,7 @@ const backendRobustBatchModeLocationHandler = async (
   token
 ) => {
   try {
+    if(await getForegroundServiceEnabled()) return;
     console.log(
       `Robust batch mode: storing location ${latitude}, ${longitude} at ${new Date(
         timestamp
@@ -118,6 +124,7 @@ const backendRobustBatchModeLocationHandler = async (
       while (batch && batch.length === 10) {
         console.log("Sending locations to server");
         try {
+          if(await getForegroundServiceEnabled()) return;
           await api.post(
             `/trips/${tripId}/locations/batch`,
             { locations: batch },
@@ -332,10 +339,10 @@ export async function startBackgroundLocationUpdates() {
 
   return await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
     accuracy: Location.Accuracy.BestForNavigation,
-    timeInterval: 10000,
-    distanceInterval: 5,
-    differentialDistanceInterval: 5,
-    deferredUpdatesInterval: 10000,
+    timeInterval: 5000,
+    distanceInterval: 1,
+    differentialDistanceInterval: 1,
+    deferredUpdatesInterval: 0,
     showsBackgroundLocationIndicator: true,
     foregroundService: {
       notificationTitle: "TrackORoute",

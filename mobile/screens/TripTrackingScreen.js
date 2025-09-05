@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Polyline, Marker } from "react-native-maps";
+import { WebView } from "react-native-webview";
 import {
   requestLocationPermissions,
   startLocationUpdates,
@@ -87,8 +88,10 @@ export default function TripTrackingScreen({ token }) {
 
   const foregroundLiveModeLocationHandler = async (location) => {
     try {
+      
       if(!(await getForegroundServiceEnabled())) return;
       const tripId = await getTripId();
+      
       await api.post(
         `/trips/${tripId}/locations`,
         { locations: [location] },
@@ -112,6 +115,7 @@ export default function TripTrackingScreen({ token }) {
 
   const foregroundBatchModeLocationHandler = async (location) => {
     try {
+      
       if(!(await getForegroundServiceEnabled())) return;
       logger.foreground(
         `Location : ${location.latitude}, ${location.longitude} at ${location.timestamp} in Local DB`
@@ -135,6 +139,7 @@ export default function TripTrackingScreen({ token }) {
         try {
           logger.foreground("Sending batch of locations to server");
           const tripId = await getTripId();
+          if(!(await getForegroundServiceEnabled())) return;
           await api.post(
             `/trips/${tripId}/locations/batch`,
             { locations: batch },
@@ -168,7 +173,7 @@ export default function TripTrackingScreen({ token }) {
 
   const foregroundSendOnCheckoutModeLocationHandler = async (location) => {
     try {
-      if(!(await getForegroundServiceEnabled())) return;
+      // if(!(await getForegroundServiceEnabled())) return;
       await insertLocation(
         location.latitude,
         location.longitude,
@@ -328,7 +333,7 @@ export default function TripTrackingScreen({ token }) {
 
       // Flush any remaining batch in batch mode or sendOnCheckout mode
       if (
-        (trackingMode === "batch" || trackingMode === "sendOnCheckout") &&
+        (trackingMode === "batch" || trackingMode === "sendOnCheckout" || trackingMode === "robustBatch") &&
         tripId
       ) {
         // For batch mode, flush any remaining batch
@@ -752,41 +757,123 @@ export default function TripTrackingScreen({ token }) {
                 </Text>
               </View>
               <View style={styles.mapContainer}>
-                <MapView
-                  style={styles.map}
-                  initialRegion={
-                    liveLocations.length > 0
-                      ? {
-                          latitude: liveLocations[0].latitude,
-                          longitude: liveLocations[0].longitude,
-                          latitudeDelta: 0.01,
-                          longitudeDelta: 0.01,
-                        }
-                      : {
-                          latitude: 20,
-                          longitude: 78,
-                          latitudeDelta: 10,
-                          longitudeDelta: 10,
-                        }
-                  }
-                >
-                  {liveLocations.length > 0 && (
-                    <Polyline
-                      coordinates={liveLocations}
-                      strokeColor="#3b82f6"
-                      strokeWidth={4}
-                    />
-                  )}
-                  {liveLocations.length > 0 && (
-                    <Marker coordinate={liveLocations[0]} title="Start" />
-                  )}
-                  {liveLocations.length > 1 && (
-                    <Marker
-                      coordinate={liveLocations[liveLocations.length - 1]}
-                      title="Current"
-                    />
-                  )}
-                </MapView>
+                {Platform.OS === "android" ? (
+                  <WebView
+                    key={`tracking-webview-${liveLocations.length}`}
+                    source={{
+                      html: `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+                          <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+                        </head>
+                        <body style="margin:0;padding:0;">
+                          <div id="map" style="width: 100%; height: 100vh;"></div>
+                        </body>
+                        </html>
+                      `,
+                    }}
+                    style={styles.map}
+                    injectedJavaScript={`
+                      console.log('Tracking WebView injectedJavaScript running...');
+                      const liveLocations = ${JSON.stringify(liveLocations)};
+                      
+                      console.log('Live locations count:', liveLocations.length);
+                      
+                      if (liveLocations.length === 0) {
+                        // Default view for India if no locations
+                        const map = L.map('map').setView([20, 78], 5);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                          maxZoom: 19,
+                        }).addTo(map);
+                        console.log('Showing default India view');
+                        return;
+                      }
+                      
+                      const start = liveLocations[0];
+                      const current = liveLocations[liveLocations.length - 1];
+                      
+                      console.log('Start point:', start);
+                      console.log('Current point:', current);
+
+                      const map = L.map('map').setView([start.latitude, start.longitude], 15);
+                      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                      }).addTo(map);
+
+                      // Draw the route path
+                      if (liveLocations.length > 1) {
+                        const latlngs = liveLocations.map(loc => [loc.latitude, loc.longitude]);
+                        L.polyline(latlngs, { 
+                          color: '#3b82f6', 
+                          weight: 4,
+                          opacity: 0.8
+                        }).addTo(map);
+                      }
+
+                      // Start marker
+                      L.marker([start.latitude, start.longitude])
+                        .addTo(map)
+                        .bindPopup('Start')
+                        .openPopup();
+                      
+                      // Current position marker (if different from start)
+                      if (liveLocations.length > 1) {
+                        L.marker([current.latitude, current.longitude])
+                          .addTo(map)
+                          .bindPopup('Current Position');
+                      }
+
+                      // Fit map to show all locations
+                      if (liveLocations.length > 1) {
+                        const group = L.featureGroup([
+                          L.polyline(liveLocations.map(loc => [loc.latitude, loc.longitude]))
+                        ]);
+                        map.fitBounds(group.getBounds().pad(0.1));
+                      }
+                      
+                      console.log('Tracking map setup complete');
+                    `}
+                  />
+                ) : (
+                  <MapView
+                    style={styles.map}
+                    initialRegion={
+                      liveLocations.length > 0
+                        ? {
+                            latitude: liveLocations[0].latitude,
+                            longitude: liveLocations[0].longitude,
+                            latitudeDelta: 0.01,
+                            longitudeDelta: 0.01,
+                          }
+                        : {
+                            latitude: 20,
+                            longitude: 78,
+                            latitudeDelta: 10,
+                            longitudeDelta: 10,
+                          }
+                    }
+                  >
+                    {liveLocations.length > 0 && (
+                      <Polyline
+                        coordinates={liveLocations}
+                        strokeColor="#3b82f6"
+                        strokeWidth={4}
+                      />
+                    )}
+                    {liveLocations.length > 0 && (
+                      <Marker coordinate={liveLocations[0]} title="Start" />
+                    )}
+                    {liveLocations.length > 1 && (
+                      <Marker
+                        coordinate={liveLocations[liveLocations.length - 1]}
+                        title="Current"
+                      />
+                    )}
+                  </MapView>
+                )}
               </View>
             </View>
           )}
