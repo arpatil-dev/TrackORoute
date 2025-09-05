@@ -206,3 +206,27 @@ export const clearAllStorage = async () => {
 // export async function getTrackingMode() {
 //   return await AsyncStorage.getItem('trackingMode');
 // }
+
+export async function setForegroundServiceEnabled(enabled) {
+  try {
+    await AsyncStorage.setItem('foregroundServiceEnabled', enabled);
+  }
+  catch (e) {
+    console.error('Error saving foregroundServiceEnabled', e);
+  }
+}
+
+export async function getForegroundServiceEnabled() {
+  try {
+    const value = await AsyncStorage.getItem('foregroundServiceEnabled');
+    if(value == "enabled") return true;
+    else if(value == "disabled") return false;
+    else{
+      console.warn('Unknown foregroundServiceEnabled value:', value);
+    }
+    
+  } catch (e) {
+    console.error('Error reading foregroundServiceEnabled', e);
+    return false;
+  }
+}
