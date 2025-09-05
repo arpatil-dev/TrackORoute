@@ -72,6 +72,9 @@ export default function TripTrackingScreen({ token }) {
   // State to manage tracking mode: 'live', 'batch', 'sendOnCheckout', 'robustBatch'
   const [trackingMode, setTrackingModeState] = useState("live");
 
+  // Map provider preference - iOS only (Android always uses OSRM)
+  const [useOSRM, setUseOSRM] = useState(Platform.OS === 'android' ? true : false);
+
   // On mount, load tracking mode from AsyncStorage
   useEffect(() => {
     (async () => {
@@ -751,91 +754,165 @@ export default function TripTrackingScreen({ token }) {
           {tracking && (
             <View style={styles.mapSection}>
               <View style={styles.mapHeader}>
-                <Text style={styles.mapTitle}>Live Tracking</Text>
-                <Text style={styles.mapSubtitle}>
-                  {liveLocations.length} points recorded
-                </Text>
+                <View style={styles.mapHeaderLeft}>
+                  <Text style={styles.mapTitle}>Live Tracking</Text>
+                  <Text style={styles.mapSubtitle}>
+                    {liveLocations.length} points recorded
+                  </Text>
+                </View>
+                
+                {/* Map Provider Toggle - Only show on iOS */}
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity 
+                    style={[styles.mapProviderButton, { backgroundColor: useOSRM ? '#3b82f6' : '#10b981' }]}
+                    onPress={() => setUseOSRM(!useOSRM)}
+                  >
+                    <Ionicons 
+                      name={useOSRM ? 'map-outline' : 'logo-apple'} 
+                      size={16} 
+                      color="white" 
+                    />
+                    <Text style={styles.mapProviderText}>
+                      {useOSRM ? 'OSRM' : 'Apple'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
               <View style={styles.mapContainer}>
-                {Platform.OS === "android" ? (
+                {(Platform.OS === "android" || useOSRM) ? (
                   <WebView
-                    key={`tracking-webview-${liveLocations.length}`}
+                    key={`tracking-webview-${liveLocations.length}-${useOSRM}`}
                     source={{
                       html: `
                         <!DOCTYPE html>
                         <html>
                         <head>
-                          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-                          <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+                          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                          <meta charset="utf-8">
+                          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" 
+                                integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+                                crossorigin=""/>
+                          <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+                                  integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+                                  crossorigin=""></script>
+                          <style>
+                            * { margin: 0; padding: 0; }
+                            html, body { height: 100%; width: 100%; overflow: hidden; }
+                            #map { height: 100%; width: 100%; }
+                          </style>
                         </head>
-                        <body style="margin:0;padding:0;">
-                          <div id="map" style="width: 100%; height: 100vh;"></div>
+                        <body>
+                          <div id="map"></div>
+                          <script>
+                            console.log('HTML loaded, waiting for Leaflet...');
+                            
+                            function initializeMap() {
+                              const liveLocations = %LIVE_LOCATIONS%;
+                              
+                              console.log('Initializing tracking map with locations:', liveLocations.length);
+                              
+                              try {
+                                if (liveLocations.length === 0) {
+                                  // Default view for India if no locations
+                                  const map = L.map('map', {
+                                    zoomControl: true,
+                                    attributionControl: true
+                                  }).setView([20, 78], 5);
+                                  
+                                  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    maxZoom: 19,
+                                    attribution: '© OpenStreetMap contributors'
+                                  }).addTo(map);
+                                  
+                                  console.log('Showing default India view');
+                                  return;
+                                }
+                                
+                                const start = liveLocations[0];
+                                const current = liveLocations[liveLocations.length - 1];
+                                
+                                console.log('Creating tracking map centered at:', start);
+                                
+                                const map = L.map('map', {
+                                  zoomControl: true,
+                                  attributionControl: true
+                                }).setView([start.latitude, start.longitude], 15);
+                                
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                  maxZoom: 19,
+                                  attribution: '© OpenStreetMap contributors'
+                                }).addTo(map);
+
+                                // Add polyline for the tracked path
+                                if (liveLocations.length > 1) {
+                                  const pathCoords = liveLocations.map(loc => [loc.latitude, loc.longitude]);
+                                  L.polyline(pathCoords, { 
+                                    color: '#3b82f6', 
+                                    weight: 4,
+                                    opacity: 0.8
+                                  }).addTo(map);
+                                }
+
+                                // Start marker
+                                L.marker([start.latitude, start.longitude])
+                                  .addTo(map)
+                                  .bindPopup('Start')
+                                  .openPopup();
+                                
+                                // Current position marker
+                                if (liveLocations.length > 1) {
+                                  L.marker([current.latitude, current.longitude])
+                                    .addTo(map)
+                                    .bindPopup('Current Position');
+                                }
+
+                                // Fit map to show all locations
+                                if (liveLocations.length > 1) {
+                                  const group = L.featureGroup([
+                                    L.polyline(liveLocations.map(loc => [loc.latitude, loc.longitude]))
+                                  ]);
+                                  map.fitBounds(group.getBounds().pad(0.1));
+                                } else if (liveLocations.length === 1) {
+                                  map.setView([start.latitude, start.longitude], 15);
+                                }
+                                
+                                console.log('Tracking map setup complete');
+                              } catch (error) {
+                                console.error('Error initializing tracking map:', error);
+                              }
+                            }
+                            
+                            // Wait for Leaflet to load
+                            if (typeof L !== 'undefined') {
+                              initializeMap();
+                            } else {
+                              document.addEventListener('DOMContentLoaded', function() {
+                                setTimeout(initializeMap, 100);
+                              });
+                            }
+                          </script>
                         </body>
                         </html>
-                      `,
+                      `.replace('%LIVE_LOCATIONS%', JSON.stringify(liveLocations)),
                     }}
                     style={styles.map}
-                    injectedJavaScript={`
-                      console.log('Tracking WebView injectedJavaScript running...');
-                      const liveLocations = ${JSON.stringify(liveLocations)};
-                      
-                      console.log('Live locations count:', liveLocations.length);
-                      
-                      if (liveLocations.length === 0) {
-                        // Default view for India if no locations
-                        const map = L.map('map').setView([20, 78], 5);
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                          maxZoom: 19,
-                        }).addTo(map);
-                        console.log('Showing default India view');
-                        return;
-                      }
-                      
-                      const start = liveLocations[0];
-                      const current = liveLocations[liveLocations.length - 1];
-                      
-                      console.log('Start point:', start);
-                      console.log('Current point:', current);
-
-                      const map = L.map('map').setView([start.latitude, start.longitude], 15);
-                      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        maxZoom: 19,
-                      }).addTo(map);
-
-                      // Draw the route path
-                      if (liveLocations.length > 1) {
-                        const latlngs = liveLocations.map(loc => [loc.latitude, loc.longitude]);
-                        L.polyline(latlngs, { 
-                          color: '#3b82f6', 
-                          weight: 4,
-                          opacity: 0.8
-                        }).addTo(map);
-                      }
-
-                      // Start marker
-                      L.marker([start.latitude, start.longitude])
-                        .addTo(map)
-                        .bindPopup('Start')
-                        .openPopup();
-                      
-                      // Current position marker (if different from start)
-                      if (liveLocations.length > 1) {
-                        L.marker([current.latitude, current.longitude])
-                          .addTo(map)
-                          .bindPopup('Current Position');
-                      }
-
-                      // Fit map to show all locations
-                      if (liveLocations.length > 1) {
-                        const group = L.featureGroup([
-                          L.polyline(liveLocations.map(loc => [loc.latitude, loc.longitude]))
-                        ]);
-                        map.fitBounds(group.getBounds().pad(0.1));
-                      }
-                      
-                      console.log('Tracking map setup complete');
-                    `}
+                    javaScriptEnabled={true}
+                    domStorageEnabled={true}
+                    startInLoadingState={true}
+                    scalesPageToFit={false}
+                    scrollEnabled={false}
+                    bounces={false}
+                    allowsInlineMediaPlayback={true}
+                    mediaPlaybackRequiresUserAction={false}
+                    originWhitelist={['*']}
+                    onError={(syntheticEvent) => {
+                      const { nativeEvent } = syntheticEvent;
+                      console.error('WebView error: ', nativeEvent);
+                    }}
+                    onHttpError={(syntheticEvent) => {
+                      const { nativeEvent } = syntheticEvent;
+                      console.error('WebView HTTP error: ', nativeEvent);
+                    }}
                   />
                 ) : (
                   <MapView
@@ -1225,7 +1302,12 @@ const styles = StyleSheet.create({
   },
   mapHeader: {
     marginBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+  },
+  mapHeaderLeft: {
+    flex: 1,
   },
   mapTitle: {
     fontSize: 20,
@@ -1236,6 +1318,27 @@ const styles = StyleSheet.create({
   mapSubtitle: {
     fontSize: 14,
     color: "#64748b",
+  },
+  mapProviderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  mapProviderText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+    marginLeft: 4,
   },
   mapContainer: {
     height: 300,
