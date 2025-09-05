@@ -1,7 +1,16 @@
-import React, { useState, useRef } from 'react';
-import MapView, { Polyline, Marker } from 'react-native-maps';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useRef } from "react";
+import MapView, { Polyline, Marker } from "react-native-maps";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  StatusBar,
+  Dimensions,
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { WebView } from "react-native-webview";
 
 export default function TripMapScreen({ route }) {
   /* Example: route.params.locations is an array of { latitude, longitude } */
@@ -9,24 +18,28 @@ export default function TripMapScreen({ route }) {
   /* Map reference for controlling the map */
   const mapRef = useRef(null);
   /* Map type state: 'standard' or 'satellite' */
-  const [mapType, setMapType] = useState('standard');
+  const [mapType, setMapType] = useState("standard");
   /* Show/hide statistics panel */
   const [showStats, setShowStats] = useState(true);
 
   /* Validate locations data */
-  const validLocations = locations.filter(loc => 
-    loc && 
-    typeof loc.latitude === 'number' && 
-    typeof loc.longitude === 'number' &&
-    !isNaN(loc.latitude) && 
-    !isNaN(loc.longitude)
+  const validLocations = locations.filter(
+    (loc) =>
+      loc &&
+      typeof loc.latitude === "number" &&
+      typeof loc.longitude === "number" &&
+      !isNaN(loc.latitude) &&
+      !isNaN(loc.longitude)
   );
 
   /* If no valid locations, show empty state */
   if (!validLocations.length) {
     return (
       <>
-        <StatusBar barStyle="light-content" backgroundColor={styles.statusBar.backgroundColor} />
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={styles.statusBar.backgroundColor}
+        />
         <View style={styles.emptyContainer}>
           <Ionicons name="map-outline" size={64} color="#94a3b8" />
           <Text style={styles.emptyTitle}>No Route Data</Text>
@@ -46,22 +59,24 @@ export default function TripMapScreen({ route }) {
   const calculateDistance = () => {
     /* Need at least 2 points to calculate distance */
     if (validLocations.length < 2) return 0;
-    
+
     /* Calculations */
     let totalDistance = 0;
     for (let i = 1; i < validLocations.length; i++) {
       const prev = validLocations[i - 1];
       const curr = validLocations[i];
-      
+
       // Haversine formula for distance calculation
       const R = 6371; // Earth's radius in kilometers
-      const dLat = (curr.latitude - prev.latitude) * Math.PI / 180;
-      const dLon = (curr.longitude - prev.longitude) * Math.PI / 180;
-      const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(prev.latitude * Math.PI / 180) * Math.cos(curr.latitude * Math.PI / 180) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const dLat = ((curr.latitude - prev.latitude) * Math.PI) / 180;
+      const dLon = ((curr.longitude - prev.longitude) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((prev.latitude * Math.PI) / 180) *
+          Math.cos((curr.latitude * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       const distance = R * c;
       totalDistance += distance;
     }
@@ -85,16 +100,59 @@ export default function TripMapScreen({ route }) {
 
   /* Toggle between standard and satellite map types */
   const toggleMapType = () => {
-    setMapType(prevType => prevType === 'standard' ? 'satellite' : 'standard');
+    setMapType((prevType) =>
+      prevType === "standard" ? "satellite" : "standard"
+    );
   };
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor={styles.statusBar.backgroundColor} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={styles.statusBar.backgroundColor}
+      />
       <View style={styles.container}>
+        {console.log(start.latitude, start.longitude)}
+        {Platform.OS === "android" ? (
+          <WebView
+            source={{
+               html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+      </head>
+      <body style="margin:0;padding:0;">
+        <div id="map" style="width: 100%; height: 100vh;"></div>
+      </body>
+      </html>
+    `,
+            }}
+            style={styles.map}
+            injectedJavaScript={`
+    const validLocations = ${JSON.stringify(validLocations)};
+    const start = validLocations[0];
+    const end = validLocations[validLocations.length - 1];
 
-        {/* Map Container */}
-        <View style={styles.mapContainer}>
+    const map = L.map('map').setView([start.latitude, start.longitude], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(map);
+
+    const latlngs = validLocations.map(loc => [loc.latitude, loc.longitude]);
+    L.polyline(latlngs, { color: 'blue' }).addTo(map);
+
+    L.marker([start.latitude, start.longitude]).addTo(map).bindPopup('Start').openPopup();
+    L.marker([end.latitude, end.longitude]).addTo(map).bindPopup('End');
+  `}
+          />
+        ) : (
+          // <WebView
+          // source={{ html: '<h1>Hello, World!</h1>' }}
+          // style={styles.map}
+          // />
           <MapView
             ref={mapRef}
             style={styles.map}
@@ -107,7 +165,7 @@ export default function TripMapScreen({ route }) {
             }}
             onMapReady={fitToCoordinates}
             onError={(error) => {
-              console.error('MapView error:', error);
+              console.error("MapView error:", error);
             }}
           >
             <Polyline
@@ -117,7 +175,7 @@ export default function TripMapScreen({ route }) {
               lineCap="round"
               lineJoin="round"
             />
-            
+
             {/* Start Marker */}
             <Marker
               coordinate={start}
@@ -128,7 +186,7 @@ export default function TripMapScreen({ route }) {
                 <Ionicons name="flag-outline" size={24} color="#ffffff" />
               </View>
             </Marker>
-            
+
             {/* End Marker */}
             <Marker
               coordinate={end}
@@ -140,73 +198,6 @@ export default function TripMapScreen({ route }) {
               </View>
             </Marker>
           </MapView>
-        </View>
-
-        {/* Control Buttons */}
-        <View style={styles.controlsContainer}>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={fitToCoordinates}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="locate-outline" size={20} color="#3b82f6" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={toggleMapType}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="earth-outline" size={20} color="#3b82f6" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={() => setShowStats(!showStats)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="stats-chart-outline" size={20} color="#3b82f6" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Trip Statistics Panel */}
-        {showStats && (
-          <View style={styles.statsPanel}>
-            <View style={styles.statsPanelHeader}>
-              <Text style={styles.statsPanelTitle}>Trip Details</Text>
-              <TouchableOpacity
-                onPress={() => setShowStats(false)}
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {distance > 0 ? `${distance.toFixed(2)} km` : '0 km'}
-                </Text>
-                <Text style={styles.statLabel}>Total Distance</Text>
-              </View>
-              
-              <View style={styles.statDivider} />
-              
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{points}</Text>
-                <Text style={styles.statLabel}>GPS Points</Text>
-              </View>
-              
-              <View style={styles.statDivider} />
-              
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {mapType === 'standard' ? 'Standard' : 'Satellite'}
-                </Text>
-                <Text style={styles.statLabel}>Map View</Text>
-              </View>
-            </View>
-          </View>
         )}
       </View>
     </>
@@ -217,18 +208,18 @@ const styles = StyleSheet.create({
   // Layout Styles
   container: {
     flex: 1,
-    backgroundColor: '#1e293b',
+    backgroundColor: "#1e293b",
   },
   statusBar: {
-    backgroundColor: '#1e293b',
+    backgroundColor: "#1e293b",
   },
 
   // Empty State Styles
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
     paddingHorizontal: 32,
   },
   emptyIcon: {
@@ -237,15 +228,15 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1e293b',
+    fontWeight: "700",
+    color: "#1e293b",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
+    color: "#64748b",
+    textAlign: "center",
     lineHeight: 24,
   },
 
@@ -254,8 +245,8 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: 16,
     borderRadius: 24,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 8,
@@ -272,13 +263,13 @@ const styles = StyleSheet.create({
   startMarker: {
     width: 40,
     height: 40,
-    backgroundColor: '#10b981',
+    backgroundColor: "#10b981",
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 3,
-    borderColor: '#ffffff',
-    shadowColor: '#10b981',
+    borderColor: "#ffffff",
+    shadowColor: "#10b981",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -290,13 +281,13 @@ const styles = StyleSheet.create({
   endMarker: {
     width: 40,
     height: 40,
-    backgroundColor: '#ef4444',
+    backgroundColor: "#ef4444",
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 3,
-    borderColor: '#ffffff',
-    shadowColor: '#ef4444',
+    borderColor: "#ffffff",
+    shadowColor: "#ef4444",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -311,21 +302,21 @@ const styles = StyleSheet.create({
 
   // Controls Styles
   controlsContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 30,
     right: 16,
-    flexDirection: 'column',
+    flexDirection: "column",
     gap: 12,
     paddingRight: 8,
   },
   controlButton: {
     width: 48,
     height: 48,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -340,13 +331,13 @@ const styles = StyleSheet.create({
 
   // Stats Panel Styles
   statsPanel: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 20,
     right: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -356,57 +347,57 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   statsPanelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: "#f1f5f9",
   },
   statsPanelTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
+    color: "#1e293b",
   },
   closeButton: {
     width: 28,
     height: 28,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
     borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeButtonText: {
     fontSize: 14,
-    color: '#64748b',
-    fontWeight: '600',
+    color: "#64748b",
+    fontWeight: "600",
   },
   statsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
   statItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 4,
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#3b82f6',
+    fontWeight: "700",
+    color: "#3b82f6",
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
-    textAlign: 'center',
+    color: "#64748b",
+    fontWeight: "500",
+    textAlign: "center",
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: "#e2e8f0",
     marginHorizontal: 16,
   },
 });
