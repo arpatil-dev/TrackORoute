@@ -378,7 +378,11 @@ export default function TripPage() {
                     <h3 className="text-base sm:text-lg font-semibold text-slate-900">Route Visualization</h3>
                     <p className="text-xs sm:text-sm text-slate-600">Interactive map showing the complete trip route</p>
                   </div>
-                  <div className="flex items-center space-x-2 self-start sm:self-center">
+                  <div className="flex items-center space-x-3">
+                    {/* Map Controls */}
+                    <div id="map-controls" className="flex items-center gap-2">
+                      {/* Controls will be rendered here by TripMap component */}
+                    </div>
                     <svg className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
