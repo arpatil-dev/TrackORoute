@@ -27,6 +27,10 @@ export default function TripMapScreen({ route }) {
   const [isSnapping, setIsSnapping] = useState(false);
   /* Transportation mode for routing */
   const [transportMode, setTransportMode] = useState('driving'); // 'driving', 'walking', 'cycling'
+  /* Map provider preference - iOS only (Android always uses OSRM) */
+  const [useOSRM, setUseOSRM] = useState(Platform.OS === 'android' ? true : false);
+  /* Toggle between original GPS and road-snapped path */
+  const [showOriginalPath, setShowOriginalPath] = useState(false);
 
   /* Validate locations data */
   const validLocations = locations.filter(
@@ -136,7 +140,10 @@ export default function TripMapScreen({ route }) {
 
   /* Effect to snap coordinates to roads when validLocations change */
   useEffect(() => {
-    if (validLocations.length > 1) {
+    // Only snap to roads when using OSRM (Android always, or iOS when useOSRM is true)
+    const shouldSnapToRoads = Platform.OS === 'android' || useOSRM;
+    
+    if (validLocations.length > 1 && shouldSnapToRoads) {
       console.log('Starting road snapping for', validLocations.length, 'coordinates');
       console.log('First coordinate:', validLocations[0]);
       console.log('Last coordinate:', validLocations[validLocations.length - 1]);
@@ -145,11 +152,15 @@ export default function TripMapScreen({ route }) {
       // Single point, no need to snap
       console.log('Single point detected, no road snapping needed');
       setSnappedLocations(validLocations);
+    } else if (validLocations.length > 1 && !shouldSnapToRoads) {
+      // iOS with Apple Maps - use original coordinates without snapping
+      console.log('Using Apple Maps - no road snapping');
+      setSnappedLocations([]);
     } else {
       console.log('No valid locations found');
       setSnappedLocations([]);
     }
-  }, [validLocations.length, transportMode]); // Re-snap when transport mode changes
+  }, [validLocations.length, transportMode, useOSRM]); // Re-snap when transport mode or map provider changes
 
   /* If no valid locations, show empty state */
   if (!validLocations.length) {
@@ -237,6 +248,12 @@ export default function TripMapScreen({ route }) {
     console.log(`Transport mode changed to: ${modes[nextIndex]}`);
   };
 
+  /* Toggle between original GPS and road-snapped path */
+  const togglePathView = () => {
+    setShowOriginalPath(!showOriginalPath);
+    console.log(`Path view changed to: ${!showOriginalPath ? 'Original GPS' : 'Road-Snapped'}`);
+  };
+
   return (
     <>
       <StatusBar
@@ -245,101 +262,148 @@ export default function TripMapScreen({ route }) {
       />
       <View style={styles.container}>
         {console.log(start.latitude, start.longitude)}
-        {Platform.OS === "android" ? (
+        {(Platform.OS === "android" || useOSRM) ? (
           <WebView
-            key={`webview-${snappedLocations.length}-${transportMode}`} // Force re-render when data changes
+            key={`webview-${snappedLocations.length}-${transportMode}-${useOSRM}-${showOriginalPath}`} // Force re-render when data changes
             source={{
                html: `
       <!DOCTYPE html>
       <html>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" 
+              integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+              crossorigin=""/>
+        <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+                integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+                crossorigin=""></script>
+        <style>
+          * { margin: 0; padding: 0; }
+          html, body { height: 100%; width: 100%; overflow: hidden; }
+          #map { height: 100%; width: 100%; }
+        </style>
       </head>
-      <body style="margin:0;padding:0;">
-        <div id="map" style="width: 100%; height: 100vh;"></div>
+      <body>
+        <div id="map"></div>
+        <script>
+          console.log('HTML loaded, waiting for Leaflet...');
+          
+          function initializeMap() {
+            const validLocations = %VALID_LOCATIONS%;
+            const snappedLocations = %SNAPPED_LOCATIONS%;
+            const transportMode = '%TRANSPORT_MODE%';
+            const showOriginalPath = %SHOW_ORIGINAL_PATH%;
+            
+            console.log('Initializing map with locations:', validLocations.length);
+            console.log('Show original path:', showOriginalPath);
+            
+            if (!validLocations || validLocations.length === 0) {
+              console.log('No valid locations provided');
+              return;
+            }
+            
+            try {
+              // Use original or snapped based on toggle
+              const shouldUseSnapped = snappedLocations.length > 0 && !showOriginalPath;
+              const locationsToShow = shouldUseSnapped ? snappedLocations : validLocations;
+              const start = locationsToShow[0];
+              const end = locationsToShow[locationsToShow.length - 1];
+              
+              console.log('Creating map centered at:', start);
+              
+              const map = L.map('map', {
+                zoomControl: true,
+                attributionControl: true
+              }).setView([start.latitude, start.longitude], 13);
+              
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+              }).addTo(map);
+
+              // Show both original path (dashed) and snapped path (solid) for comparison
+              if (snappedLocations.length > 0 && validLocations.length > 0) {
+                console.log('Adding both paths');
+                // Original path in light gray, dashed
+                const originalLatlngs = validLocations.map(loc => [loc.latitude, loc.longitude]);
+                L.polyline(originalLatlngs, { 
+                  color: '#cccccc', 
+                  weight: 2, 
+                  dashArray: '5, 5',
+                  opacity: 0.7
+                }).addTo(map).bindPopup('Original GPS Path');
+
+                // Snapped path in blue, solid
+                const snappedLatlngs = snappedLocations.map(loc => [loc.latitude, loc.longitude]);
+                L.polyline(snappedLatlngs, { 
+                  color: 'blue', 
+                  weight: 4,
+                  opacity: 0.8
+                }).addTo(map).bindPopup('Road-Snapped Path (' + transportMode + ')');
+              } else {
+                console.log('Adding single path');
+                const latlngs = locationsToShow.map(loc => [loc.latitude, loc.longitude]);
+                L.polyline(latlngs, { color: 'blue', weight: 4 }).addTo(map);
+              }
+
+              // Markers for start and end points
+              L.marker([start.latitude, start.longitude])
+                .addTo(map)
+                .bindPopup(snappedLocations.length > 0 ? 'Start (Road-Snapped - ' + transportMode + ')' : 'Start');
+              
+              L.marker([end.latitude, end.longitude])
+                .addTo(map)
+                .bindPopup(snappedLocations.length > 0 ? 'End (Road-Snapped - ' + transportMode + ')' : 'End');
+
+              // Fit map to show all coordinates
+              if (locationsToShow.length > 1) {
+                const group = L.featureGroup([
+                  L.polyline(locationsToShow.map(loc => [loc.latitude, loc.longitude]))
+                ]);
+                map.fitBounds(group.getBounds().pad(0.1));
+              }
+              
+              console.log('Map setup complete');
+            } catch (error) {
+              console.error('Error initializing map:', error);
+            }
+          }
+          
+          // Wait for Leaflet to load
+          if (typeof L !== 'undefined') {
+            initializeMap();
+          } else {
+            document.addEventListener('DOMContentLoaded', function() {
+              setTimeout(initializeMap, 100);
+            });
+          }
+        </script>
       </body>
       </html>
-    `,
+    `.replace('%VALID_LOCATIONS%', JSON.stringify(validLocations))
+     .replace('%SNAPPED_LOCATIONS%', JSON.stringify(snappedLocations))
+     .replace('%TRANSPORT_MODE%', transportMode)
+     .replace('%SHOW_ORIGINAL_PATH%', showOriginalPath),
             }}
             style={styles.map}
-            injectedJavaScript={`
-    console.log('WebView injectedJavaScript running...');
-    const validLocations = ${JSON.stringify(validLocations)};
-    const snappedLocations = ${JSON.stringify(snappedLocations)};
-    const transportMode = '${transportMode}';
-    
-    console.log('Valid locations count:', validLocations.length);
-    console.log('Snapped locations count:', snappedLocations.length);
-    console.log('Transport mode:', transportMode);
-    
-    // Use snapped locations if available, otherwise fall back to original
-    const locationsToShow = snappedLocations.length > 0 ? snappedLocations : validLocations;
-    console.log('Using locations count:', locationsToShow.length);
-    
-    if (locationsToShow.length === 0) {
-      console.log('No locations to show');
-      return;
-    }
-    
-    const start = locationsToShow[0];
-    const end = locationsToShow[locationsToShow.length - 1];
-    
-    console.log('Start point:', start);
-    console.log('End point:', end);
-
-    const map = L.map('map').setView([start.latitude, start.longitude], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-    }).addTo(map);
-
-    // Show both original path (dashed) and snapped path (solid) for comparison
-    if (snappedLocations.length > 0 && validLocations.length > 0) {
-      console.log('Showing both original and snapped paths');
-      // Original path in light gray, dashed
-      const originalLatlngs = validLocations.map(loc => [loc.latitude, loc.longitude]);
-      L.polyline(originalLatlngs, { 
-        color: '#cccccc', 
-        weight: 2, 
-        dashArray: '5, 5',
-        opacity: 0.7
-      }).addTo(map).bindPopup('Original GPS Path');
-
-      // Snapped path in blue, solid
-      const snappedLatlngs = snappedLocations.map(loc => [loc.latitude, loc.longitude]);
-      L.polyline(snappedLatlngs, { 
-        color: 'blue', 
-        weight: 4,
-        opacity: 0.8
-      }).addTo(map).bindPopup('Road-Snapped Path (' + transportMode + ')');
-    } else {
-      console.log('Showing single path');
-      // Only original path if snapping not available
-      const latlngs = locationsToShow.map(loc => [loc.latitude, loc.longitude]);
-      L.polyline(latlngs, { color: 'blue', weight: 4 }).addTo(map);
-    }
-
-    // Markers for start and end points (using snapped if available)
-    L.marker([start.latitude, start.longitude])
-      .addTo(map)
-      .bindPopup(snappedLocations.length > 0 ? 'Start (Road-Snapped - ' + transportMode + ')' : 'Start')
-      .openPopup();
-    
-    L.marker([end.latitude, end.longitude])
-      .addTo(map)
-      .bindPopup(snappedLocations.length > 0 ? 'End (Road-Snapped - ' + transportMode + ')' : 'End');
-
-    // Fit map to show all coordinates
-    if (locationsToShow.length > 1) {
-      const group = L.featureGroup([
-        L.polyline(locationsToShow.map(loc => [loc.latitude, loc.longitude]))
-      ]);
-      map.fitBounds(group.getBounds().pad(0.1));
-    }
-    
-    console.log('Map setup complete');
-  `}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+            scalesPageToFit={false}
+            scrollEnabled={false}
+            bounces={false}
+            allowsInlineMediaPlayback={true}
+            mediaPlaybackRequiresUserAction={false}
+            originWhitelist={['*']}
+            onError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              console.error('WebView error: ', nativeEvent);
+            }}
+            onHttpError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              console.error('WebView HTTP error: ', nativeEvent);
+            }}
           />
         ) : (
           <MapView
@@ -399,35 +463,68 @@ export default function TripMapScreen({ route }) {
                 <Ionicons name="checkmark-circle" size={24} color="#ffffff" />
               </View>
             </Marker>
-            
-            {/* Loading indicator for road snapping */}
-            {isSnapping && (
-              <View style={styles.loadingOverlay}>
-                <Text style={styles.loadingText}>🔄 Snapping to roads...</Text>
-              </View>
-            )}
           </MapView>
         )}
         
         {/* Loading Overlay for Road Snapping (works for both Android and iOS) */}
         {isSnapping && (
           <View style={styles.loadingOverlay}>
-            <Text style={styles.loadingText}>🔄 Snapping to roads...</Text>
+            <Ionicons name="sync" size={18} color="white" style={{ marginRight: 8 }} />
+            <Text style={styles.loadingText}>Snapping route to roads...</Text>
           </View>
         )}
         
-        {/* Transport Mode Control */}
-        <TouchableOpacity 
-          style={styles.transportModeButton}
-          onPress={cycleTransportMode}
-        >
-          <Text style={styles.transportModeText}>
-            {transportMode === 'driving' ? '🚗' : transportMode === 'walking' ? '🚶' : '🚴'}
-          </Text>
-          <Text style={styles.transportModeLabel}>
-            {transportMode.charAt(0).toUpperCase() + transportMode.slice(1)}
-          </Text>
-        </TouchableOpacity>
+        {/* Control Buttons Container */}
+        <View style={styles.controlsContainer}>
+          {/* Transport Mode Control */}
+          <TouchableOpacity 
+            style={styles.controlButton}
+            onPress={cycleTransportMode}
+          >
+            <Ionicons 
+              name={transportMode === 'driving' ? 'car' : transportMode === 'walking' ? 'walk' : 'bicycle'} 
+              size={20} 
+              color="#374151" 
+            />
+            <Text style={styles.controlButtonLabel}>
+              {transportMode.charAt(0).toUpperCase() + transportMode.slice(1)}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Map Provider Toggle - Only show on iOS */}
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity 
+              style={[styles.controlButton, { backgroundColor: useOSRM ? '#3b82f6' : '#10b981' }]}
+              onPress={() => setUseOSRM(!useOSRM)}
+            >
+              <Ionicons 
+                name={useOSRM ? 'map' : 'logo-apple'} 
+                size={20} 
+                color="white" 
+              />
+              <Text style={[styles.controlButtonLabel, { color: 'white' }]}>
+                {useOSRM ? 'OSRM' : 'Apple'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Path View Toggle - Only show when using OSRM and have snapped locations */}
+          {(Platform.OS === 'android' || useOSRM) && snappedLocations.length > 0 && (
+            <TouchableOpacity 
+              style={[styles.controlButton, { backgroundColor: showOriginalPath ? '#ef4444' : '#10b981' }]}
+              onPress={togglePathView}
+            >
+              <Ionicons 
+                name={showOriginalPath ? 'location' : 'trail-sign'} 
+                size={20} 
+                color="white" 
+              />
+              <Text style={[styles.controlButtonLabel, { color: 'white' }]}>
+                {showOriginalPath ? 'GPS' : 'Road'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </>
   );
@@ -633,56 +730,61 @@ const styles = StyleSheet.create({
   // Loading Overlay Styles
   loadingOverlay: {
     position: 'absolute',
-    top: 80, // Position below the transport mode button
+    bottom: 100, // Position above the bottom, leaving space for any bottom elements
+    left: 20,
     right: 20,
-    backgroundColor: 'rgba(59, 130, 246, 0.9)', // Blue background with transparency
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.95)', // Slightly more opaque blue background
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: 16,
     color: 'white',
-    fontWeight: '600',
+    fontWeight: '700',
+    textAlign: 'center',
   },
 
-  // Transport Mode Button Styles
-  transportModeButton: {
+  // Control Buttons Styles
+  controlsContainer: {
     position: 'absolute',
-    top: 20,
-    left: 20,
+    top: 50,
+    right: 20,
+    flexDirection: 'column',
+    gap: 12,
+  },
+  controlButton: {
     backgroundColor: 'white',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 80,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 4,
   },
-  transportModeText: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  transportModeLabel: {
-    fontSize: 14,
+  controlButtonLabel: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#374151',
+    marginLeft: 6,
   },
 });
