@@ -64,7 +64,7 @@ function MapUpdater({ locations }) {
   return null;
 }
 
-export default function TripMap({ locations }) {
+export default function TripMap({ locations, autoRefresh = false }) {
   const mapRef = useRef();
   
   /* State for road-snapped coordinates */
@@ -75,6 +75,9 @@ export default function TripMap({ locations }) {
   const [transportMode, setTransportMode] = useState('driving'); // 'driving', 'walking', 'cycling'
   /* Toggle between original and snapped path */
   const [showOriginalPath, setShowOriginalPath] = useState(false);
+  /* Ref to track last snap time and debounce interval */
+  const lastSnapTimeRef = useRef(0);
+  const snapTimeoutRef = useRef(null);
 
   /* Fallback function to use routing instead of matching */
   const tryRouting = useCallback(async (coordinates) => {
@@ -174,20 +177,52 @@ export default function TripMap({ locations }) {
 
   /* Effect to snap coordinates to roads when locations change */
   useEffect(() => {
-    if (locations && locations.length > 1) {
-      console.log('Starting road snapping for', locations.length, 'coordinates');
-      console.log('First coordinate:', locations[0]);
-      console.log('Last coordinate:', locations[locations.length - 1]);
-      snapToRoads(locations);
-    } else if (locations && locations.length === 1) {
+    // Clear any existing timeout
+    if (snapTimeoutRef.current) {
+      clearTimeout(snapTimeoutRef.current);
+    }
+
+    if (!locations || locations.length === 0) {
+      console.log('No valid locations found');
+      setSnappedLocations([]);
+      return;
+    }
+
+    if (locations.length === 1) {
       // Single point, no need to snap
       console.log('Single point detected, no road snapping needed');
       setSnappedLocations(locations);
-    } else {
-      console.log('No valid locations found');
-      setSnappedLocations([]);
+      return;
     }
-  }, [locations, transportMode, snapToRoads]); // Re-snap when transport mode changes
+
+    // Determine snapping behavior based on auto-refresh status
+    const currentTime = Date.now();
+    const timeSinceLastSnap = currentTime - lastSnapTimeRef.current;
+    
+    if (autoRefresh) {
+      // During auto-refresh, debounce snapping to reduce API calls
+      const SNAP_DEBOUNCE_INTERVAL = 30000; // 30 seconds during auto-refresh
+      
+      if (timeSinceLastSnap < SNAP_DEBOUNCE_INTERVAL && snappedLocations.length > 0) {
+        console.log(`Auto-refresh mode: Skipping road snapping (last snap ${Math.round(timeSinceLastSnap/1000)}s ago)`);
+        return;
+      }
+      
+      // Set a timeout to snap after a delay during auto-refresh
+      console.log('Auto-refresh mode: Scheduling delayed road snapping in 5 seconds');
+      snapTimeoutRef.current = setTimeout(() => {
+        console.log('Auto-refresh mode: Executing delayed road snapping');
+        lastSnapTimeRef.current = Date.now();
+        snapToRoads(locations);
+      }, 5000); // 5 second delay during auto-refresh
+      
+    } else {
+      // When not auto-refreshing, snap immediately
+      console.log('Manual mode: Starting immediate road snapping for', locations.length, 'coordinates');
+      lastSnapTimeRef.current = currentTime;
+      snapToRoads(locations);
+    }
+  }, [locations, transportMode, snapToRoads, autoRefresh, snappedLocations.length]); // Re-snap when transport mode changes
 
   /* Cycle through transport modes */
   const cycleTransportMode = () => {
@@ -198,10 +233,33 @@ export default function TripMap({ locations }) {
     console.log(`Transport mode changed to: ${modes[nextIndex]}`);
   };
 
+  /* Cleanup effect for timeouts */
+  useEffect(() => {
+    return () => {
+      if (snapTimeoutRef.current) {
+        clearTimeout(snapTimeoutRef.current);
+      }
+    };
+  }, []);
+
   /* Toggle between original and snapped path */
   const togglePathView = () => {
     setShowOriginalPath(!showOriginalPath);
     console.log(`Path view changed to: ${!showOriginalPath ? 'Original GPS' : 'Road-Snapped'}`);
+  };
+
+  /* Force immediate road snapping */
+  const forceSnap = () => {
+    if (locations && locations.length > 1) {
+      console.log('Force snapping triggered by user');
+      // Clear any pending timeout
+      if (snapTimeoutRef.current) {
+        clearTimeout(snapTimeoutRef.current);
+        snapTimeoutRef.current = null;
+      }
+      lastSnapTimeRef.current = Date.now();
+      snapToRoads(locations);
+    }
   };
   
   if (!locations || locations.length === 0) return <div>Loading map...</div>;
@@ -217,6 +275,16 @@ export default function TripMap({ locations }) {
   // Controls component to render in header
   const mapControls = (
     <div className="flex items-center gap-2">
+      {/* Auto-refresh mode indicator */}
+      {autoRefresh && (
+        <div className="inline-flex items-center px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
+          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Auto-refresh mode
+        </div>
+      )}
+
       {/* Status indicator - moved to left */}
       {isSnapping && (
         <div className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md">
@@ -284,6 +352,20 @@ export default function TripMap({ locations }) {
               Road Path
             </>
           )}
+        </button>
+      )}
+
+      {/* Force Snap Button - Only show during auto-refresh */}
+      {autoRefresh && locations && locations.length > 1 && (
+        <button
+          onClick={forceSnap}
+          disabled={isSnapping}
+          className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Snap Now
         </button>
       )}
     </div>

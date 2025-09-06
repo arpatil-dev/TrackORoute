@@ -418,7 +418,7 @@ export default function TripPage() {
               {/* Map Container */}
               <div className="flex-1 min-h-0 relative">
                 <div className="absolute inset-0">
-                  <TripMap locations={tripData.locations} />
+                  <TripMap locations={tripData.locations} autoRefresh={autoRefresh} />
                 </div>
               </div>
             </div>
