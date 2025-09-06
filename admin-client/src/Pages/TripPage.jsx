@@ -42,9 +42,22 @@ export default function TripPage() {
       totalDistance += distance;
     }
 
-    // Calculate duration
-    const startTime = new Date(locations[0].timestamp);
-    const endTime = new Date(locations[locations.length - 1].timestamp);
+    // Calculate duration - use startedAt for start, last location timestamp for end
+    let startTime, endTime;
+    
+    if (locations && locations.length > 0) {
+      // Use startedAt if available, otherwise fallback to first location timestamp
+      startTime = trip.trip.startedAt 
+        ? new Date(trip.trip.startedAt) 
+        : new Date(locations[0].timestamp);
+      
+      // Always use last location timestamp for end time
+      endTime = new Date(locations[locations.length - 1].timestamp);
+    } else {
+      startTime = new Date();
+      endTime = new Date();
+    }
+    
     const duration = (endTime - startTime) / 1000 / 60; // in minutes
 
     // Calculate average speed (km/h)
@@ -276,23 +289,35 @@ export default function TripPage() {
                   {tripData.tripName || `Trip ${tripData._id.slice(-6)}`}
                 </h2>
                 <p className="text-sm text-slate-600">
-                  {tripData.locations && tripData.locations.length > 0 
-                    ? new Date(tripData.locations[0].timestamp).toLocaleDateString('en-US', {
+                  {tripData.startedAt 
+                    ? new Date(tripData.startedAt).toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
                       })
-                    : 'No date available'
+                    : tripData.locations && tripData.locations.length > 0 
+                      ? new Date(tripData.locations[0].timestamp).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      : 'No date available'
                   }
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {tripData.locations && tripData.locations.length > 0 
-                    ? new Date(tripData.locations[0].timestamp).toLocaleTimeString('en-US', {
+                  {tripData.startedAt 
+                    ? new Date(tripData.startedAt).toLocaleTimeString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit'
                       })
-                    : ''
+                    : tripData.locations && tripData.locations.length > 0 
+                      ? new Date(tripData.locations[0].timestamp).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : ''
                   }
                 </p>
               </div>

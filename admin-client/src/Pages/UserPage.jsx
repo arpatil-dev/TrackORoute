@@ -58,6 +58,11 @@ export default function UserPage() {
 
   // Helper: Get trip date
   function getTripDate(trip) {
+    // Use trip's startedAt property instead of first location timestamp
+    if (trip.startedAt) {
+      return new Date(trip.startedAt);
+    }
+    // Fallback to first location timestamp if startedAt is not available
     if (!trip.locations || trip.locations.length === 0) return null;
     return new Date(trip.locations[0].timestamp);
   }
