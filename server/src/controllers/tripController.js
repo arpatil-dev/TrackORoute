@@ -5,7 +5,7 @@ import handleResponse from "./controllerFunction.js";
 export const startTrip = async (req, res) => {
   try {
     const { tripName } = req.body;
-    const trip = new Trip({ user: req.user._id, tripName });
+    const trip = new Trip({ user: req.user._id, tripName, startedAt: new Date()});
     await trip.save();
     handleResponse(res, 201, "Trip started", { tripId: trip._id });
   } catch (error) {
